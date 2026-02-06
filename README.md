@@ -59,8 +59,8 @@ When alerts fire from Azure Monitor or Elastic, this system automatically trigge
 ### 1. Clone and Install
 
 ```bash
-git clone https://github.com/COG-GTM/devin-automated-triage.git
-cd devin-automated-triage/demo-ui
+git clone https://github.com/COG-GTM/devin-triage-workflow.git
+cd devin-triage-workflow/demo-ui
 pnpm install
 ```
 
@@ -186,7 +186,7 @@ Final summary with all artifacts and recommendations
 ## 📁 Project Structure
 
 ```
-devin-automated-triage/
+devin-triage-workflow/
 ├── demo-ui/                    # Next.js demo application
 │   ├── src/
 │   │   └── app/

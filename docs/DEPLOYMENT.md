@@ -6,7 +6,7 @@ This guide covers deploying the webhook endpoint to various platforms.
 
 ### Vercel (Recommended)
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/COG-GTM/devin-automated-triage&env=DEVIN_API_KEY,TARGET_REPO)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/COG-GTM/devin-triage-workflow&env=DEVIN_API_KEY,TARGET_REPO)
 
 Or manually:
 
@@ -22,7 +22,7 @@ Set environment variables in Vercel Dashboard:
 
 ### Railway
 
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template?template=https://github.com/COG-GTM/devin-automated-triage)
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template?template=https://github.com/COG-GTM/devin-triage-workflow)
 
 ### Render
 
