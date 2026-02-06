@@ -1,237 +1,397 @@
-# Devin AI Automated Alert Triage
+# Devin Triage Workflow
 
-> **Automatically triage, analyze, and fix production issues using Devin AI**
+### Automatically triage, analyze, and fix production issues with Devin AI
 
-When alerts fire from Azure Monitor or Elastic, this system automatically triggers Devin to analyze the issue, identify root cause, implement fixes, create JIRA tickets, and notify your team on Slack.
-
-![Demo](./docs/images/demo-flow.png)
-
-## 🎯 What This Does
-
-1. **Alert Fires** → Azure Monitor or Elastic detects an issue
-2. **Webhook Triggers** → Calls your API endpoint with alert context
-3. **Devin Analyzes** → Clones repo, traces error, identifies root cause
-4. **Auto-Fix** → Creates PR with fix, tests, and documentation
-5. **JIRA Ticket** → Full tracking with alert details, session link, PR link
-6. **Slack Notification** → Team notified with status and links
-
-## 🏗️ Architecture
-
-```
-┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
-│   Azure Monitor  │     │      Elastic     │     │  Other Sources   │
-│   (Action Group) │     │  (Watcher/Rules) │     │   (PagerDuty)    │
-└────────┬─────────┘     └────────┬─────────┘     └────────┬─────────┘
-         │                        │                        │
-         └────────────────────────┼────────────────────────┘
-                                  │
-                                  ▼
-                    ┌─────────────────────────┐
-                    │    Webhook Endpoint     │
-                    │   (Next.js API Route)   │
-                    └────────────┬────────────┘
-                                 │
-                                 ▼
-                    ┌─────────────────────────┐
-                    │      Devin AI API       │
-                    │    (v1/sessions POST)   │
-                    └────────────┬────────────┘
-                                 │
-                    ┌────────────┼────────────┐
-                    │            │            │
-                    ▼            ▼            ▼
-              ┌──────────┐ ┌──────────┐ ┌──────────┐
-              │  GitHub  │ │   JIRA   │ │  Slack   │
-              │    PR    │ │  Ticket  │ │  Alert   │
-              └──────────┘ └──────────┘ └──────────┘
-```
-
-## 📋 Prerequisites
-
-- [Node.js 18+](https://nodejs.org/)
-- [pnpm](https://pnpm.io/) (or npm/yarn)
-- [Devin AI Account](https://devin.ai/) with API access
-- Azure Monitor or Elastic (for alert sources)
-- Optional: JIRA, Slack, GitHub for full workflow
-
-## 🚀 Quick Start
-
-### 1. Clone and Install
-
-```bash
-git clone https://github.com/COG-GTM/devin-triage-workflow.git
-cd devin-triage-workflow/demo-ui
-pnpm install
-```
-
-### 2. Configure Environment
-
-```bash
-cp .env.example .env.local
-```
-
-Edit `.env.local`:
-```env
-DEVIN_API_KEY=your_devin_api_key_here
-TARGET_REPO=https://github.com/your-org/your-repo
-JIRA_PROJECT=YOUR_PROJECT_KEY
-SLACK_CHANNEL=#alerts
-```
-
-### 3. Run the Demo
-
-```bash
-pnpm dev
-```
-
-Open http://localhost:3000 to see the demo UI.
-
-### 4. Trigger a Test Alert
-
-1. Click one of the demo triggers (Token Expiration, API Timeout, etc.)
-2. Watch the Devin session get created
-3. Click the session link to watch Devin work
-4. Check your JIRA and Slack for updates
-
-## 📖 Documentation
-
-| Document | Description |
-|----------|-------------|
-| [Azure Monitor Setup](./docs/AZURE-MONITOR-SETUP.md) | Configure Azure to trigger Devin |
-| [Elastic Setup](./docs/ELASTIC-SETUP.md) | Configure Elastic/Kibana to trigger Devin |
-| [Devin Playbook](./docs/DEVIN-PLAYBOOK.md) | The 7-phase triage playbook |
-| [API Reference](./docs/API-REFERENCE.md) | Webhook endpoint documentation |
-| [Production Deployment](./docs/DEPLOYMENT.md) | Deploy to Vercel, AWS, etc. |
-
-## 🔧 Configuration
-
-### Devin API Key
-
-Get your API key from [app.devin.ai/settings/api-keys](https://app.devin.ai/settings/api-keys):
-
-- **Personal API Key** (`apk_user_*`): Works with v1 API, tied to your account
-- **Service API Key** (`apk_*`): Org-scoped, good for automation
-- **Service User Credential** (`cog_*`): v3 API with RBAC (enterprise)
-
-### Playbook Association
-
-For automatic playbook execution:
-
-1. Create the playbook in Devin (see [docs/DEVIN-PLAYBOOK.md](./docs/DEVIN-PLAYBOOK.md))
-2. Associate it with your API key in Settings
-3. Every session from that key follows the playbook
-
-## 🖥️ Demo UI Features
-
-### Azure Monitor View
-- Exact replica of Azure Portal UI
-- Action Groups with webhook configuration
-- Alert Processing Rules
-- Alert details with logs and diagnostics
-
-### Elastic View
-- Kibana-style dark theme
-- Alerting Rules and Connectors
-- Watcher configuration
-- ML Anomaly Detection jobs
-
-### Both Views Include
-- Demo alert triggers (Token Expiration, API Timeout, Null Reference)
-- Click-to-expand alert details
-- Real-time Devin session status
-- Full error logs with stack traces
-
-## 📊 The 7-Phase Triage Playbook
-
-When Devin receives an alert, it follows this structured approach:
-
-### Phase 1: Alert Analysis
-Parse alert details, understand symptoms, document initial assessment
-
-### Phase 2: Codebase Analysis
-Clone repo, locate bug, trace stack, identify root cause
-
-### Phase 3: Triage Decision
-Choose path: Code Fix / Config Issue / External Issue / Needs Review
-
-### Phase 4: Implement Fix
-Minimal changes, error handling, tests, create PR
-
-### Phase 5: JIRA Ticket
-Create full tracking ticket with all context and links
-
-### Phase 6: Slack Notification
-Post status with JIRA, PR, and session links
-
-### Phase 7: Wrap Up
-Final summary with all artifacts and recommendations
-
-## 🔌 Integrations
-
-### Required
-- **Devin AI** - The AI agent that performs triage
-
-### Recommended
-- **GitHub** - For PR creation and code access
-- **JIRA** - For ticket tracking
-- **Slack** - For team notifications
-
-### Alert Sources (Choose One or More)
-- **Azure Monitor** - Action Groups with webhooks
-- **Elastic/Kibana** - Alerting Rules, Watcher, ML Anomaly
-- **PagerDuty** - Webhooks
-- **Datadog** - Webhooks
-- **Any webhook-capable monitoring tool**
-
-## 📁 Project Structure
-
-```
-devin-triage-workflow/
-├── demo-ui/                    # Next.js demo application
-│   ├── src/
-│   │   └── app/
-│   │       ├── page.tsx        # Main demo UI (Azure + Elastic)
-│   │       ├── globals.css     # Azure/Elastic design systems
-│   │       └── api/
-│   │           └── trigger-devin/
-│   │               └── route.ts # Webhook endpoint
-│   ├── .env.example            # Environment template
-│   └── package.json
-├── docs/                       # Documentation
-│   ├── AZURE-MONITOR-SETUP.md
-│   ├── ELASTIC-SETUP.md
-│   ├── DEVIN-PLAYBOOK.md
-│   ├── API-REFERENCE.md
-│   └── DEPLOYMENT.md
-└── README.md
-```
-
-## 🛡️ Security
-
-- **Never commit API keys** - Use environment variables
-- **Use GitHub Secrets** - For CI/CD deployments
-- **Rotate keys regularly** - Especially after team changes
-- **Audit sessions** - Review Devin's actions periodically
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📄 License
-
-MIT License - see [LICENSE](./LICENSE) for details.
-
-## 🙏 Acknowledgments
-
-- [Devin AI](https://devin.ai/) - The AI software engineer
-- [Cognition](https://cognition.ai/) - Creators of Devin
-- [Azure Monitor](https://azure.microsoft.com/en-us/products/monitor) - Microsoft's observability platform
-- [Elastic](https://www.elastic.co/) - The search and observability company
+When alerts fire from your monitoring system, Devin automatically analyzes the issue, identifies the root cause, implements a fix, creates a PR, and notifies your team — all in minutes, not hours.
 
 ---
 
-**Built with 🔱 by the Cognition GTM Team**
+## 🎯 What This Does
+
+```
+Alert Fires → Devin Analyzes → Root Cause Found → PR Created → Team Notified
+     ↓              ↓                ↓                ↓              ↓
+  30 seconds    2 minutes        5 minutes       8 minutes      Done ✅
+```
+
+**Instead of:**
+- Engineer gets paged at 3 AM 😴
+- Spends 30 min understanding the alert
+- Spends 1 hour finding root cause
+- Spends 2 hours writing a fix
+- Creates PR next morning
+
+**With Devin Triage:**
+- Alert fires → Devin session auto-created
+- Devin clones repo, traces error, identifies root cause
+- Devin creates PR with fix + tests
+- Engineer wakes up to a solved problem ☕
+
+---
+
+## 🛠️ Two Integration Paths
+
+Choose your monitoring platform, or use both for defense-in-depth:
+
+| | Azure Monitor | Elastic (Kibana) |
+|---|---|---|
+| **Best for** | Azure-native workloads | Complex log analysis, ML |
+| **Setup time** | ~30 minutes | ~45 minutes |
+| **Alert types** | Metrics, Logs, Activity | Logs, Metrics, ML Anomaly |
+| **Query language** | KQL | KQL, Lucene, ES DSL |
+| **Cost** | Often included with Azure | Subscription or self-managed |
+
+### Path 1: Azure Monitor
+Perfect if you're running on Azure (AKS, App Service, Functions, VMs).
+
+**→ [Azure Monitor Setup Guide](./docs/AZURE-MONITOR-SETUP.md)**
+
+### Path 2: Elastic / Kibana  
+Perfect if you're using the ELK stack or need ML-powered anomaly detection.
+
+**→ [Elastic Setup Guide](./docs/ELASTIC-SETUP.md)**
+
+### Path 3: Both (Recommended for Enterprise)
+Use Azure Monitor for quick metric alerts + Elastic for deep log analysis and ML.
+
+**→ [Comparison & Multi-Platform Guide](./docs/COMPARISON.md)**
+
+---
+
+## 🚀 Quick Start (15 minutes)
+
+### Step 1: Deploy the Webhook (2 minutes)
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/COG-GTM/devin-triage-workflow&env=DEVIN_API_KEY,TARGET_REPO&envDescription=Configure%20your%20Devin%20integration&project-name=devin-triage&repository-name=devin-triage)
+
+Or manually:
+```bash
+git clone https://github.com/COG-GTM/devin-triage-workflow.git
+cd devin-triage-workflow/demo-ui
+npm install
+vercel --prod
+```
+
+### Step 2: Configure Environment Variables
+
+| Variable | Description | Where to Get |
+|----------|-------------|--------------|
+| `DEVIN_API_KEY` | Your Devin API key | [app.devin.ai/settings/api-keys](https://app.devin.ai/settings/api-keys) |
+| `TARGET_REPO` | Repo Devin will analyze | Your GitHub repo URL |
+
+### Step 3: Connect Your Monitoring Platform
+
+**Azure Monitor:**
+1. Create an Action Group with a Webhook action
+2. Point it to `https://your-app.vercel.app/api/trigger-devin`
+3. Enable "Common alert schema"
+4. Create Alert Rules that use your Action Group
+
+**→ [Full Azure Monitor Guide](./docs/AZURE-MONITOR-SETUP.md)**
+
+**Elastic:**
+1. Create a Webhook Connector in Kibana
+2. Point it to `https://your-app.vercel.app/api/trigger-devin`
+3. Create Alerting Rules that use your Connector
+
+**→ [Full Elastic Guide](./docs/ELASTIC-SETUP.md)**
+
+### Step 4: Test It
+
+Trigger a test alert or use the demo UI:
+```bash
+cd demo-ui
+npm run dev
+# Open http://localhost:3000
+```
+
+Click a demo trigger → Watch Devin work → See the PR created!
+
+---
+
+## 📊 Why Azure Monitor?
+
+### Benefits
+
+| Benefit | Description |
+|---------|-------------|
+| **Native Integration** | Built into Azure Portal, no extra infrastructure |
+| **Zero Setup for Azure Resources** | AKS, App Service, Functions already emit metrics |
+| **Action Groups** | Reusable notification targets (webhook, email, SMS, Teams) |
+| **Alert Processing Rules** | Route alerts to different actions based on severity/resource |
+| **Cost Effective** | Often included in existing Azure spend |
+
+### When to Choose Azure Monitor
+
+✅ Running workloads on Azure (AKS, App Service, VMs, Functions)  
+✅ Want fastest time-to-value (30 min setup)  
+✅ Simple threshold-based alerts (error count > 0, latency > 10s)  
+✅ Team already familiar with Azure Portal  
+✅ Budget-conscious (often included in Azure subscription)
+
+### Azure Monitor Architecture
+
+```
+┌─────────────────────┐
+│   Your Azure        │
+│   Resources         │
+│  (AKS, App Service) │
+└──────────┬──────────┘
+           │ Metrics & Logs
+           ▼
+┌─────────────────────┐
+│   Azure Monitor     │
+│   Alert Rules       │
+│  (KQL queries)      │
+└──────────┬──────────┘
+           │ Alert fires
+           ▼
+┌─────────────────────┐
+│   Action Group      │
+│   (Webhook action)  │
+└──────────┬──────────┘
+           │ POST request
+           ▼
+┌─────────────────────┐
+│   Your Webhook      │
+│   /api/trigger-devin│
+└──────────┬──────────┘
+           │ Creates session
+           ▼
+┌─────────────────────┐
+│      Devin AI       │
+│   Analyzes & Fixes  │
+└──────────┬──────────┘
+           │
+     ┌─────┴─────┐
+     ▼           ▼
+┌─────────┐ ┌─────────┐
+│ GitHub  │ │  Slack  │
+│   PR    │ │  Alert  │
+└─────────┘ └─────────┘
+```
+
+---
+
+## 📊 Why Elastic?
+
+### Benefits
+
+| Benefit | Description |
+|---------|-------------|
+| **ML Anomaly Detection** | Automatically detect unusual patterns without manual thresholds |
+| **Full-Text Search** | Powerful log analysis with Lucene and ES Query DSL |
+| **Cross-Service Correlation** | Trace issues across microservices automatically |
+| **Long-Term Retention** | Configurable data retention for compliance |
+| **Multi-Cloud** | Works with AWS, Azure, GCP, or on-prem |
+
+### When to Choose Elastic
+
+✅ Need ML-powered anomaly detection (no manual thresholds)  
+✅ Complex log analysis and correlation across services  
+✅ Already using ELK stack or Elastic Cloud  
+✅ Multi-cloud or hybrid environment  
+✅ Security/SIEM use cases  
+✅ Need advanced query capabilities (Lucene, ES DSL)
+
+### Elastic Architecture
+
+```
+┌─────────────────────┐
+│   Your Services     │
+│  (any cloud/on-prem)│
+└──────────┬──────────┘
+           │ Logs (Filebeat, Logstash)
+           ▼
+┌─────────────────────┐
+│   Elasticsearch     │
+│   (Index & Search)  │
+└──────────┬──────────┘
+           │
+     ┌─────┴─────┐
+     ▼           ▼
+┌─────────┐ ┌─────────┐
+│ Kibana  │ │   ML    │
+│ Rules   │ │  Jobs   │
+└────┬────┘ └────┬────┘
+     │           │
+     └─────┬─────┘
+           │ Alert fires
+           ▼
+┌─────────────────────┐
+│ Webhook Connector   │
+└──────────┬──────────┘
+           │ POST request
+           ▼
+┌─────────────────────┐
+│   Your Webhook      │
+│   /api/trigger-devin│
+└──────────┬──────────┘
+           │ Creates session
+           ▼
+┌─────────────────────┐
+│      Devin AI       │
+│   Analyzes & Fixes  │
+└─────────────────────┘
+```
+
+---
+
+## 🔄 Why Use Both?
+
+For enterprise environments, combining both platforms provides defense-in-depth:
+
+| Layer | Platform | Use Case |
+|-------|----------|----------|
+| **Quick Alerts** | Azure Monitor | CPU > 90%, Memory > 85%, Error count > 0 |
+| **Deep Analysis** | Elastic | Log correlation, pattern detection, ML anomaly |
+| **Compliance** | Elastic | Long-term log retention, audit trails |
+| **Cost Optimization** | Azure Monitor | Use included alerting for Azure resources |
+
+### Combined Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        Your Application                         │
+└───────────────────────────────┬─────────────────────────────────┘
+                                │
+              ┌─────────────────┴─────────────────┐
+              │                                   │
+              ▼                                   ▼
+┌──────────────────────┐             ┌──────────────────────┐
+│    Azure Monitor     │             │       Elastic        │
+│                      │             │                      │
+│  • Metric alerts     │             │  • Log correlation   │
+│  • Quick thresholds  │             │  • ML anomaly        │
+│  • Azure-native      │             │  • Full-text search  │
+└──────────┬───────────┘             └───────────┬──────────┘
+           │                                     │
+           └─────────────────┬───────────────────┘
+                             │
+                             ▼
+                  ┌─────────────────────┐
+                  │   Webhook Endpoint  │
+                  │  (Deduplication)    │
+                  └──────────┬──────────┘
+                             │
+                             ▼
+                  ┌─────────────────────┐
+                  │      Devin AI       │
+                  └─────────────────────┘
+```
+
+### Deduplication
+
+When using both, the webhook can deduplicate to avoid double-triggering:
+
+```typescript
+// Alerts from both platforms go to same endpoint
+// Dedupe by alert signature (name + resource + time window)
+const alertKey = `${alertName}:${resource}:${Math.floor(Date.now() / 300000)}`;
+if (await redis.exists(alertKey)) return; // Already processing
+await redis.set(alertKey, 'processing', 'EX', 300);
+```
+
+---
+
+## 📖 Documentation
+
+| Guide | Description |
+|-------|-------------|
+| [Azure Monitor Setup](./docs/AZURE-MONITOR-SETUP.md) | Step-by-step Azure configuration with portal links |
+| [Elastic Setup](./docs/ELASTIC-SETUP.md) | Kibana alerting, Watcher, and ML setup |
+| [Comparison Guide](./docs/COMPARISON.md) | Detailed feature comparison and decision matrix |
+| [Devin Playbook](./docs/DEVIN-PLAYBOOK.md) | The 7-phase triage methodology |
+| [API Reference](./docs/API-REFERENCE.md) | Webhook endpoint documentation |
+| [Deployment Guide](./docs/DEPLOYMENT.md) | Vercel, Azure Functions, AWS Lambda, Docker |
+
+---
+
+## 🧪 Demo UI
+
+The included demo UI simulates both Azure Monitor and Elastic alert experiences:
+
+```bash
+cd demo-ui
+npm install
+npm run dev
+```
+
+**Features:**
+- Azure Monitor replica with Action Groups and Alert Rules UI
+- Elastic/Kibana-style alerting interface
+- Demo triggers for common error scenarios
+- Real-time Devin session status simulation
+- Expandable alert details with logs and stack traces
+
+---
+
+## 🔧 The Devin Triage Playbook
+
+When an alert fires, Devin follows this structured 7-phase approach:
+
+### Phase 1: Alert Analysis
+Parse alert details, understand symptoms, document initial assessment.
+
+### Phase 2: Codebase Analysis  
+Clone repo, locate bug in code, trace stack, identify root cause.
+
+### Phase 3: Triage Decision
+Choose path: **Code Fix** / **Config Issue** / **External Issue** / **Escalate**
+
+### Phase 4: Implement Fix
+Minimal code changes, proper error handling, tests included.
+
+### Phase 5: Create Pull Request
+Clear title, problem description, solution explanation, linked to alert.
+
+### Phase 6: JIRA Ticket (Optional)
+Full tracking ticket with alert context, PR link, session link.
+
+### Phase 7: Slack Notification (Optional)
+Team notified with status, links to PR, JIRA, and Devin session.
+
+**→ [Full Playbook Documentation](./docs/DEVIN-PLAYBOOK.md)**
+
+---
+
+## 💰 ROI Calculator
+
+| Metric | Without Devin | With Devin | Savings |
+|--------|---------------|------------|---------|
+| MTTR (Mean Time to Resolve) | 4 hours | 30 minutes | **87% faster** |
+| Engineer time per incident | 4 hours | 15 minutes (review) | **3.75 hours** |
+| Incidents per month | 20 | 20 | — |
+| Monthly engineer hours saved | — | — | **75 hours** |
+| At $150/hour loaded cost | — | — | **$11,250/month** |
+
+---
+
+## 🔒 Security
+
+- **API keys stored server-side** — never exposed to clients
+- **Webhook secrets supported** — authenticate incoming requests
+- **No sensitive data logged** — only alert metadata processed
+- **Devin operates in your repos** — you control access
+
+---
+
+## 🤝 Support
+
+- **Documentation:** [docs/](./docs/)
+- **Issues:** [github.com/COG-GTM/devin-triage-workflow/issues](https://github.com/COG-GTM/devin-triage-workflow/issues)
+- **Devin Support:** [devin.ai/support](https://devin.ai/support)
+
+---
+
+## 📄 License
+
+MIT License — see [LICENSE](./LICENSE)
+
+---
+
+<p align="center">
+  <strong>Built with 🔱 by the Cognition GTM Team</strong>
+  <br>
+  <a href="https://cognition.ai">cognition.ai</a> · <a href="https://devin.ai">devin.ai</a>
+</p>
