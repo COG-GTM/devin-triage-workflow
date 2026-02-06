@@ -1,295 +1,549 @@
 # API Reference
 
-This document describes the webhook endpoint that receives alerts and triggers Devin sessions.
+> **Complete documentation for the webhook endpoint that receives alerts and triggers Devin sessions.**
 
-## Endpoint
+---
+
+## Table of Contents
+
+1. [Endpoint Overview](#endpoint-overview)
+2. [Authentication](#authentication)
+3. [Request Format](#request-format)
+4. [Response Format](#response-format)
+5. [Error Handling](#error-handling)
+6. [Integration Examples](#integration-examples)
+7. [Environment Variables](#environment-variables)
+8. [Customization](#customization)
+
+---
+
+## Endpoint Overview
+
+### Primary Endpoint
 
 ```
 POST /api/trigger-devin
 ```
 
+| Property | Value |
+|----------|-------|
+| Method | `POST` |
+| Content-Type | `application/json` |
+| Authentication | None (API key stored server-side) |
+
+### Base URLs
+
+| Environment | URL |
+|-------------|-----|
+| Local Development | `http://localhost:3000/api/trigger-devin` |
+| Vercel Production | `https://your-app.vercel.app/api/trigger-devin` |
+| Vercel Preview | `https://your-app-git-branch.vercel.app/api/trigger-devin` |
+
+---
+
 ## Authentication
 
-The endpoint itself does not require authentication (the Devin API key is stored server-side). However, you may want to add authentication for production use.
+The endpoint doesn't require client authentication by default — the Devin API key is stored as a server-side environment variable.
 
-### Adding Basic Auth
+### Adding Webhook Secret (Recommended for Production)
+
+To secure your endpoint, add a webhook secret:
+
+#### 1. Set Environment Variable
+
+```bash
+# Vercel
+vercel env add WEBHOOK_SECRET
+
+# Local .env.local
+WEBHOOK_SECRET=your-secret-key-here
+```
+
+#### 2. Update the Route Handler
 
 ```typescript
-// In route.ts
-const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
+// src/app/api/trigger-devin/route.ts
 
 export async function POST(request: Request) {
+  // Verify webhook secret
   const authHeader = request.headers.get('Authorization');
-  if (authHeader !== `Bearer ${WEBHOOK_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const expectedAuth = `Bearer ${process.env.WEBHOOK_SECRET}`;
+  
+  if (process.env.WEBHOOK_SECRET && authHeader !== expectedAuth) {
+    return NextResponse.json(
+      { error: 'Unauthorized' },
+      { status: 401 }
+    );
   }
+  
   // ... rest of handler
 }
 ```
 
-## Request Body
+#### 3. Configure in Azure/Elastic
 
-### Full Schema
+Add the Authorization header to your webhook configuration:
 
-```typescript
-interface AlertPayload {
-  // Required
-  alertName: string;           // Name of the alert rule
-  severity: number;            // 0-4 (0=Critical, 4=Verbose)
-  description: string;         // Alert description
-  
-  // Recommended
-  affectedResource: string;    // Resource that triggered the alert
-  logs: string;                // Error logs or stack traces
-  file: string;                // Suspected file with the bug
-  line: number;                // Suspected line number
-  bugDescription: string;      // Description of the suspected bug
-  
-  // Optional
-  resourceType?: string;       // Type of resource (e.g., "AKS Cluster")
-  signalType?: string;         // "Log" or "Metric"
-  condition?: string;          // Alert condition/query
-  threshold?: string;          // Threshold that was exceeded
-  actualValue?: string;        // Actual value that triggered
-  firedTime?: string;          // ISO timestamp when alert fired
-  monitorUrl?: string;         // URL to the monitoring dashboard
-}
+```
+Authorization: Bearer your-secret-key-here
 ```
 
-### Minimal Example
+---
 
-```json
-{
-  "alertName": "api-error-rate",
-  "severity": 1,
-  "description": "Error rate exceeded 5%",
-  "affectedResource": "api-gateway",
-  "logs": "Error: Connection timeout",
-  "file": "src/api/handler.ts",
-  "line": 42,
-  "bugDescription": "Missing timeout configuration"
-}
-```
+## Request Format
 
-### Full Example
+### Standard Request Body
 
 ```json
 {
   "alertName": "mcp-token-expiration",
   "severity": 1,
-  "description": "Azure AD access token has expired, causing authentication failures in the MCP server.",
+  "description": "Azure AD access token has expired",
   "affectedResource": "aks-mcp-server-prod",
-  "resourceType": "Microsoft.ContainerService/managedClusters",
-  "signalType": "Log",
-  "condition": "ContainerLog | where LogEntry contains 'TokenCredentialAuthenticationError'",
-  "threshold": "Count > 0 within 5 minutes",
-  "actualValue": "3 occurrences in last 5 minutes",
-  "firedTime": "2024-02-06T12:00:00.000Z",
-  "monitorUrl": "https://portal.azure.com/#@tenant/resource/.../alerts",
-  "logs": "TokenCredentialAuthenticationError: The access token has expired\n    at getCurrentUserDetails (auth.ts:14)\nerrorCode=AADSTS700024",
+  "signalType": "log",
+  "firedTime": "2024-02-06T12:00:00Z",
+  "source": "azure-monitor",
+  "logs": "Error: TokenCredentialAuthenticationError...\n    at auth.ts:14",
   "file": "src/tools/auth.ts",
   "line": 14,
-  "bugDescription": "Token refresh not implemented - tokens expire without renewal"
+  "dimensions": {
+    "cluster": "aks-mcp-server-prod",
+    "namespace": "mcp-system",
+    "pod": "mcp-server-7d4f8b9c6-x2j4k"
+  }
 }
 ```
 
-## Response
+### Field Reference
 
-### Success (200)
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `alertName` | string | Yes | Name of the alert rule that fired |
+| `severity` | number | Yes | 0 (Critical) to 4 (Verbose) |
+| `description` | string | Yes | Human-readable description of the issue |
+| `affectedResource` | string | No | Resource name (cluster, service, etc.) |
+| `signalType` | string | No | `log`, `metric`, or `activity` |
+| `firedTime` | string | No | ISO 8601 timestamp |
+| `source` | string | No | `azure-monitor`, `elastic`, `datadog`, etc. |
+| `logs` | string | No | Error logs, stack traces |
+| `file` | string | No | Source file where error occurred |
+| `line` | number | No | Line number in source file |
+| `dimensions` | object | No | Additional context (key-value pairs) |
+
+### Azure Monitor Common Alert Schema
+
+When Azure Monitor sends an alert with the common schema enabled:
+
+```json
+{
+  "schemaId": "azureMonitorCommonAlertSchema",
+  "data": {
+    "essentials": {
+      "alertId": "/subscriptions/{sub}/providers/Microsoft.AlertsManagement/alerts/{id}",
+      "alertRule": "mcp-error-detection",
+      "severity": "Sev1",
+      "signalType": "Log",
+      "monitorCondition": "Fired",
+      "monitoringService": "Log Alerts V2",
+      "alertTargetIDs": [
+        "/subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.ContainerService/managedClusters/{cluster}"
+      ],
+      "configurationItems": ["aks-mcp-server-prod"],
+      "originAlertId": "{guid}",
+      "firedDateTime": "2024-02-06T12:00:00.0000000Z",
+      "description": "Error detected in MCP server"
+    },
+    "alertContext": {
+      "conditionType": "LogQueryCriteria",
+      "condition": {
+        "windowSize": "PT5M",
+        "allOf": [{
+          "searchQuery": "ContainerLog | where LogEntry contains 'Error'",
+          "metricValue": 3
+        }]
+      },
+      "SearchResults": {
+        "tables": [{
+          "name": "PrimaryResult",
+          "columns": [
+            {"name": "TimeGenerated", "type": "datetime"},
+            {"name": "LogEntry", "type": "string"}
+          ],
+          "rows": [
+            ["2024-02-06T11:58:23.456Z", "Error: TokenCredentialAuthenticationError..."]
+          ]
+        }]
+      }
+    }
+  }
+}
+```
+
+### Elastic/Kibana Alerting Format
+
+When Kibana sends an alert:
+
+```json
+{
+  "alertName": "{{rule.name}}",
+  "alertId": "{{alert.id}}",
+  "severity": 1,
+  "description": "{{context.reason}}",
+  "source": "kibana",
+  "signalType": "log",
+  "firedTime": "{{date}}",
+  "groupByField": "{{context.group}}",
+  "matchedDocuments": "{{context.matchingDocuments}}",
+  "logs": "{{#context.hits}}{{_source.message}}\n{{/context.hits}}"
+}
+```
+
+---
+
+## Response Format
+
+### Success Response
 
 ```json
 {
   "success": true,
-  "session_id": "devin-abc123def456",
-  "url": "https://app.devin.ai/sessions/abc123def456"
+  "sessionId": "session_1707228000000",
+  "sessionUrl": "https://app.devin.ai/sessions/session_1707228000000",
+  "message": "Devin session created successfully"
 }
 ```
 
-### Error (4xx/5xx)
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | boolean | `true` if session was created |
+| `sessionId` | string | Unique Devin session identifier |
+| `sessionUrl` | string | Direct link to watch Devin work |
+| `message` | string | Human-readable status message |
+
+### HTTP Status Codes
+
+| Code | Meaning | Body |
+|------|---------|------|
+| 200 | Success | Success response with session details |
+| 400 | Bad Request | Missing required fields |
+| 401 | Unauthorized | Invalid or missing webhook secret |
+| 500 | Server Error | Devin API error or internal error |
+
+---
+
+## Error Handling
+
+### 400 Bad Request
 
 ```json
 {
   "success": false,
-  "error": "Error description",
-  "message": "Detailed error message"
+  "error": "Missing required field: alertName"
 }
 ```
 
-### Common Errors
+Common causes:
+- Missing `alertName` field
+- Missing `severity` field  
+- Invalid JSON body
 
-| Status | Error | Cause |
-|--------|-------|-------|
-| 400 | Invalid JSON | Malformed request body |
-| 401 | Unauthorized | Invalid webhook secret (if configured) |
-| 500 | DEVIN_API_KEY not configured | Missing environment variable |
-| 502 | Devin API error | Devin API returned an error |
-
-## Environment Variables
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `DEVIN_API_KEY` | Yes | Your Devin API key |
-| `TARGET_REPO` | No | Default repository URL (default: COG-GTM repo) |
-| `JIRA_PROJECT` | No | JIRA project key for ticket creation |
-| `SLACK_CHANNEL` | No | Slack channel for notifications |
-| `WEBHOOK_SECRET` | No | Secret for webhook authentication |
-
-## GET /api/trigger-devin
-
-Returns configuration status (useful for health checks).
-
-### Response
+### 401 Unauthorized
 
 ```json
 {
-  "configured": true,
-  "keyType": "personal",
-  "targetRepo": "https://github.com/COG-GTM/azure-devops-mcp",
-  "jiraProject": "PLATFORM",
-  "slackChannel": "#alerts"
+  "success": false,
+  "error": "Unauthorized"
 }
 ```
 
-## Mapping Alert Schemas
+Causes:
+- Missing Authorization header
+- Invalid webhook secret
 
-### Azure Monitor Common Alert Schema
+### 500 Internal Server Error
+
+```json
+{
+  "success": false,
+  "error": "Failed to create Devin session",
+  "details": "API rate limit exceeded"
+}
+```
+
+Causes:
+- Invalid Devin API key
+- Devin API rate limit
+- Network error to Devin API
+- Devin API outage
+
+---
+
+## Integration Examples
+
+### cURL
+
+```bash
+curl -X POST https://your-app.vercel.app/api/trigger-devin \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-webhook-secret" \
+  -d '{
+    "alertName": "manual-test-alert",
+    "severity": 1,
+    "description": "Testing the webhook integration",
+    "source": "curl-test",
+    "logs": "Error: Test error at test.ts:42"
+  }'
+```
+
+### Python
+
+```python
+import requests
+
+response = requests.post(
+    "https://your-app.vercel.app/api/trigger-devin",
+    headers={
+        "Content-Type": "application/json",
+        "Authorization": "Bearer your-webhook-secret"
+    },
+    json={
+        "alertName": "python-test-alert",
+        "severity": 1,
+        "description": "Testing from Python",
+        "source": "python-script",
+        "logs": "Error: Test error"
+    }
+)
+
+print(response.json())
+# {'success': True, 'sessionId': 'session_...', 'sessionUrl': 'https://app.devin.ai/...'}
+```
+
+### Node.js
 
 ```javascript
-// Transform Azure alert to our schema
-function transformAzureAlert(azurePayload) {
-  const { essentials, alertContext } = azurePayload.data;
-  
-  return {
-    alertName: essentials.alertRule,
-    severity: parseInt(essentials.severity.replace('Sev', '')),
-    description: essentials.description,
-    affectedResource: essentials.alertTargetIDs[0],
-    signalType: essentials.signalType,
-    firedTime: essentials.firedDateTime,
-    monitorUrl: `https://portal.azure.com/#@/resource${essentials.alertId}`,
-    logs: JSON.stringify(alertContext.SearchResults || alertContext),
-    file: "unknown",
-    line: 0,
-    bugDescription: `Azure alert: ${essentials.alertRule}`
-  };
-}
-```
-
-### Elastic Alert Schema
-
-```javascript
-// Transform Elastic alert to our schema
-function transformElasticAlert(elasticPayload) {
-  return {
-    alertName: elasticPayload.rule?.name || "elastic-alert",
-    severity: 1, // Map based on your rules
-    description: elasticPayload.context?.message || "Elastic alert triggered",
-    affectedResource: elasticPayload.context?.host?.name || "elastic-cluster",
-    signalType: elasticPayload.rule?.type || "Log",
-    firedTime: elasticPayload.date,
-    logs: elasticPayload.context?.reason || "",
-    file: "unknown",
-    line: 0,
-    bugDescription: `Elastic alert: ${elasticPayload.rule?.name}`
-  };
-}
-```
-
-### PagerDuty Webhook
-
-```javascript
-// Transform PagerDuty webhook to our schema
-function transformPagerDutyAlert(pdPayload) {
-  const incident = pdPayload.incident;
-  
-  return {
-    alertName: incident.title,
-    severity: incident.urgency === "high" ? 1 : 2,
-    description: incident.description,
-    affectedResource: incident.service?.name || "unknown",
-    signalType: "PagerDuty",
-    firedTime: incident.created_at,
-    monitorUrl: incident.html_url,
-    logs: incident.body?.details || "",
-    file: "unknown",
-    line: 0,
-    bugDescription: incident.title
-  };
-}
-```
-
-## Rate Limiting
-
-The endpoint does not implement rate limiting by default. For production, consider adding:
-
-```typescript
-import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
-
-const ratelimit = new Ratelimit({
-  redis: Redis.fromEnv(),
-  limiter: Ratelimit.slidingWindow(10, "1 m"), // 10 requests per minute
-});
-
-export async function POST(request: Request) {
-  const ip = request.headers.get("x-forwarded-for") ?? "127.0.0.1";
-  const { success } = await ratelimit.limit(ip);
-  
-  if (!success) {
-    return NextResponse.json(
-      { error: "Rate limit exceeded" },
-      { status: 429 }
-    );
-  }
-  // ... rest of handler
-}
-```
-
-## Idempotency
-
-By default, each request creates a new Devin session. To enable idempotency (prevent duplicate sessions for the same alert):
-
-```typescript
-const response = await fetch(`${V1_BASE_URL}/sessions`, {
+const response = await fetch("https://your-app.vercel.app/api/trigger-devin", {
   method: "POST",
   headers: {
-    "Authorization": `Bearer ${DEVIN_API_KEY}`,
     "Content-Type": "application/json",
+    "Authorization": "Bearer your-webhook-secret"
   },
   body: JSON.stringify({
-    prompt,
-    idempotent: true,  // Enable idempotency
-  }),
+    alertName: "nodejs-test-alert",
+    severity: 1,
+    description: "Testing from Node.js",
+    source: "nodejs-script",
+    logs: "Error: Test error"
+  })
 });
+
+const data = await response.json();
+console.log(data);
 ```
 
-With `idempotent: true`, Devin will return an existing session if one was created with the same prompt.
+### PowerShell
 
-## Webhook Retries
+```powershell
+$body = @{
+    alertName = "powershell-test-alert"
+    severity = 1
+    description = "Testing from PowerShell"
+    source = "powershell-script"
+    logs = "Error: Test error"
+} | ConvertTo-Json
 
-Most alerting systems retry failed webhooks. Ensure your endpoint is idempotent or handles duplicate requests gracefully.
+$response = Invoke-RestMethod -Uri "https://your-app.vercel.app/api/trigger-devin" `
+    -Method Post `
+    -Headers @{
+        "Content-Type" = "application/json"
+        "Authorization" = "Bearer your-webhook-secret"
+    } `
+    -Body $body
 
-### Handling Retries
+$response
+```
+
+---
+
+## Environment Variables
+
+### Required
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `DEVIN_API_KEY` | Your Devin API key | `apk_user_abc123...` |
+| `TARGET_REPO` | GitHub repo for Devin to analyze | `https://github.com/org/repo` |
+
+### Optional
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `WEBHOOK_SECRET` | Secret for webhook authentication | None (no auth) |
+| `JIRA_PROJECT` | JIRA project key for ticket creation | None |
+| `SLACK_CHANNEL` | Slack channel for notifications | None |
+| `DEVIN_PLAYBOOK_ID` | ID of playbook to use | None (default behavior) |
+
+### Setting Variables in Vercel
+
+**Via CLI:**
+```bash
+vercel env add DEVIN_API_KEY
+# Enter value when prompted
+
+vercel env add TARGET_REPO
+# Enter value when prompted
+```
+
+**Via Dashboard:**
+1. Go to [vercel.com/dashboard](https://vercel.com/dashboard)
+2. Select your project
+3. Go to **Settings** → **Environment Variables**
+4. Add each variable
+
+---
+
+## Customization
+
+### Custom Prompt Engineering
+
+Modify the session prompt in `route.ts`:
 
 ```typescript
-// Store processed alert IDs
-const processedAlerts = new Set();
+const prompt = `
+You are an SRE triaging a production alert.
 
-export async function POST(request: Request) {
-  const body = await request.json();
-  const alertId = `${body.alertName}-${body.firedTime}`;
-  
-  if (processedAlerts.has(alertId)) {
-    return NextResponse.json({
-      success: true,
-      message: "Already processed",
-      duplicate: true
-    });
-  }
-  
-  processedAlerts.add(alertId);
-  // ... process alert
+## Alert Details
+- **Name**: ${alertName}
+- **Severity**: Sev ${severity}
+- **Description**: ${description}
+- **Time**: ${firedTime}
+
+## Error Logs
+\`\`\`
+${logs}
+\`\`\`
+
+## Your Tasks
+1. Clone the repository: ${process.env.TARGET_REPO}
+2. Analyze the error and identify root cause
+3. Create a fix with proper error handling
+4. Write tests for the fix
+5. Create a Pull Request
+6. Create a JIRA ticket: ${process.env.JIRA_PROJECT}
+7. Post to Slack: ${process.env.SLACK_CHANNEL}
+
+Begin triage.
+`;
+```
+
+### Adding Custom Fields
+
+Extend the request handler to accept additional fields:
+
+```typescript
+interface AlertPayload {
+  alertName: string;
+  severity: number;
+  description: string;
+  // Add custom fields
+  team?: string;
+  runbook?: string;
+  priority?: 'P1' | 'P2' | 'P3';
 }
 ```
 
-For production, use Redis or a database instead of in-memory storage.
+### Routing to Different Playbooks
+
+Route different alert types to different Devin playbooks:
+
+```typescript
+function getPlaybookId(alertName: string): string | undefined {
+  const playbooks: Record<string, string> = {
+    'auth-error': 'playbook_auth_123',
+    'timeout': 'playbook_perf_456',
+    'null-reference': 'playbook_bug_789',
+  };
+  
+  for (const [pattern, id] of Object.entries(playbooks)) {
+    if (alertName.includes(pattern)) return id;
+  }
+  return undefined; // Use default
+}
+```
+
+---
+
+## Rate Limits
+
+### Devin API Limits
+
+| Plan | Requests/minute | Concurrent Sessions |
+|------|-----------------|---------------------|
+| Starter | 10 | 1 |
+| Team | 60 | 5 |
+| Enterprise | 300 | 20 |
+
+### Handling Rate Limits
+
+The endpoint implements exponential backoff:
+
+```typescript
+async function createSessionWithRetry(payload: any, retries = 3): Promise<any> {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await createDevinSession(payload);
+    } catch (error: any) {
+      if (error.status === 429 && i < retries - 1) {
+        const delay = Math.pow(2, i) * 1000; // 1s, 2s, 4s
+        await new Promise(r => setTimeout(r, delay));
+        continue;
+      }
+      throw error;
+    }
+  }
+}
+```
+
+---
+
+## Devin API Reference
+
+### Create Session Endpoint
+
+```
+POST https://api.devin.ai/v1/sessions
+Authorization: Bearer {DEVIN_API_KEY}
+Content-Type: application/json
+```
+
+**Request:**
+```json
+{
+  "prompt": "Your task description here...",
+  "playbook_id": "optional-playbook-id"
+}
+```
+
+**Response:**
+```json
+{
+  "session_id": "session_1707228000000",
+  "url": "https://app.devin.ai/sessions/session_1707228000000",
+  "status": "created"
+}
+```
+
+### Devin API Documentation
+
+- **API Reference:** [docs.devin.ai/api-reference](https://docs.devin.ai/api-reference)
+- **Playbooks:** [docs.devin.ai/playbooks](https://docs.devin.ai/playbooks)
+- **Rate Limits:** [docs.devin.ai/rate-limits](https://docs.devin.ai/rate-limits)
+
+---
+
+## Next Steps
+
+- [Azure Monitor Setup](./AZURE-MONITOR-SETUP.md) — Configure Azure alerts
+- [Elastic Setup](./ELASTIC-SETUP.md) — Configure Elastic alerts
+- [Devin Playbook](./DEVIN-PLAYBOOK.md) — Customize triage behavior
+- [Deployment Guide](./DEPLOYMENT.md) — Production deployment options
