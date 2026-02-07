@@ -1,0 +1,763 @@
+@import "tailwindcss";
+
+/* ============================================================================
+   AZURE PORTAL DESIGN SYSTEM
+   Based on Microsoft Fluent UI and Azure Portal exact specifications
+   ============================================================================ */
+
+:root {
+  /* Azure Portal Colors - Exact values from Azure Portal */
+  --azure-blue-primary: #0078d4;
+  --azure-blue-dark: #106ebe;
+  --azure-blue-darker: #005a9e;
+  --azure-blue-light: #2b88d8;
+  --azure-blue-lighter: #c7e0f4;
+  --azure-blue-bg: #deecf9;
+  
+  /* Neutral Palette */
+  --azure-white: #ffffff;
+  --azure-gray-10: #faf9f8;
+  --azure-gray-20: #f3f2f1;
+  --azure-gray-30: #edebe9;
+  --azure-gray-40: #e1dfdd;
+  --azure-gray-50: #d2d0ce;
+  --azure-gray-60: #c8c6c4;
+  --azure-gray-90: #a19f9d;
+  --azure-gray-110: #8a8886;
+  --azure-gray-130: #605e5c;
+  --azure-gray-150: #3b3a39;
+  --azure-gray-160: #323130;
+  --azure-gray-190: #201f1e;
+  
+  /* Semantic Colors */
+  --azure-success: #107c10;
+  --azure-success-bg: #dff6dd;
+  --azure-warning: #ffb900;
+  --azure-warning-bg: #fff4ce;
+  --azure-error: #a80000;
+  --azure-error-light: #d13438;
+  --azure-error-bg: #fde7e9;
+  --azure-info: #0078d4;
+  --azure-info-bg: #deecf9;
+  
+  /* Severity Colors - Azure Monitor exact */
+  --sev0: #a80000;
+  --sev1: #d83b01;
+  --sev2: #ffaa44;
+  --sev3: #0078d4;
+  --sev4: #8764b8;
+
+  /* Typography */
+  --font-family: "Segoe UI", "Segoe UI Web (West European)", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", sans-serif;
+  --font-mono: "Cascadia Code", "Fira Code", Consolas, "Courier New", monospace;
+  
+  /* Spacing (4px grid) */
+  --spacing-xs: 4px;
+  --spacing-s: 8px;
+  --spacing-m: 12px;
+  --spacing-l: 16px;
+  --spacing-xl: 20px;
+  --spacing-xxl: 24px;
+  
+  /* Border Radius */
+  --radius-none: 0;
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  
+  /* Shadows - Azure Portal exact */
+  --shadow-4: 0 1.6px 3.6px 0 rgba(0,0,0,.132), 0 0.3px 0.9px 0 rgba(0,0,0,.108);
+  --shadow-8: 0 3.2px 7.2px 0 rgba(0,0,0,.132), 0 0.6px 1.8px 0 rgba(0,0,0,.108);
+  --shadow-16: 0 6.4px 14.4px 0 rgba(0,0,0,.132), 0 1.2px 3.6px 0 rgba(0,0,0,.108);
+  --shadow-64: 0 25.6px 57.6px 0 rgba(0,0,0,.22), 0 4.8px 14.4px 0 rgba(0,0,0,.18);
+  
+  /* Header height */
+  --header-height: 48px;
+  
+  /* ============================================================================
+     ELASTIC/KIBANA DESIGN SYSTEM
+     ============================================================================ */
+  --eui-color-primary: #00bfb3;
+  --eui-color-accent: #f04e98;
+  --eui-color-success: #00bfb3;
+  --eui-color-warning: #fec514;
+  --eui-color-danger: #bd271e;
+  
+  --eui-color-empty-shade: #1d1e24;
+  --eui-color-lightest-shade: #25262e;
+  --eui-color-light-shade: #343741;
+  --eui-color-medium-shade: #535966;
+  --eui-color-dark-shade: #98a2b3;
+  --eui-color-darkest-shade: #d4dae5;
+  --eui-color-full-shade: #ffffff;
+  
+  --eui-color-text: #dfe5ef;
+  --eui-color-subdue: #81858f;
+}
+
+/* Base Styles */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-family);
+  color: var(--azure-gray-160);
+  background: var(--azure-gray-10);
+  margin: 0;
+  padding: 0;
+  line-height: 1.42857143;
+}
+
+/* Azure Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--azure-gray-60);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--azure-gray-90);
+}
+
+/* ============================================================================
+   AZURE PORTAL COMPONENTS
+   ============================================================================ */
+
+/* Azure Primary Button */
+.azure-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 80px;
+  height: 32px;
+  padding: 0 16px;
+  background: var(--azure-blue-primary);
+  color: white;
+  border: 1px solid var(--azure-blue-primary);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.1s, border-color 0.1s;
+  outline: none;
+}
+
+.azure-btn-primary:hover {
+  background: var(--azure-blue-dark);
+  border-color: var(--azure-blue-dark);
+}
+
+.azure-btn-primary:active {
+  background: var(--azure-blue-darker);
+  border-color: var(--azure-blue-darker);
+}
+
+.azure-btn-primary:disabled {
+  background: var(--azure-gray-20);
+  border-color: var(--azure-gray-20);
+  color: var(--azure-gray-90);
+  cursor: not-allowed;
+}
+
+/* Azure Secondary Button */
+.azure-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 80px;
+  height: 32px;
+  padding: 0 16px;
+  background: var(--azure-white);
+  color: var(--azure-gray-160);
+  border: 1px solid var(--azure-gray-110);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: background-color 0.1s, border-color 0.1s;
+  outline: none;
+}
+
+.azure-btn-secondary:hover {
+  background: var(--azure-gray-20);
+}
+
+.azure-btn-secondary:active {
+  background: var(--azure-gray-30);
+}
+
+/* Azure Text Input */
+.azure-input {
+  width: 100%;
+  height: 32px;
+  padding: 0 8px;
+  background: var(--azure-white);
+  color: var(--azure-gray-160);
+  border: 1px solid var(--azure-gray-110);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-family: var(--font-family);
+  outline: none;
+  transition: border-color 0.1s;
+}
+
+.azure-input:hover {
+  border-color: var(--azure-gray-160);
+}
+
+.azure-input:focus {
+  border-color: var(--azure-blue-primary);
+  border-width: 2px;
+  padding: 0 7px;
+}
+
+.azure-input::placeholder {
+  color: var(--azure-gray-90);
+}
+
+.azure-input.mono {
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+/* Azure Select/Dropdown */
+.azure-select {
+  width: 100%;
+  height: 32px;
+  padding: 0 28px 0 8px;
+  background: var(--azure-white);
+  color: var(--azure-gray-160);
+  border: 1px solid var(--azure-gray-110);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-family: var(--font-family);
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23605e5c' d='M2.5 4.5l3.5 3.5 3.5-3.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+}
+
+.azure-select:hover {
+  border-color: var(--azure-gray-160);
+}
+
+.azure-select:focus {
+  border-color: var(--azure-blue-primary);
+  border-width: 2px;
+  padding-left: 7px;
+}
+
+/* Azure Checkbox */
+.azure-checkbox {
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--azure-gray-110);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  accent-color: var(--azure-blue-primary);
+}
+
+.azure-checkbox:checked {
+  background: var(--azure-blue-primary);
+  border-color: var(--azure-blue-primary);
+}
+
+/* Azure Card/Panel */
+.azure-card {
+  background: var(--azure-white);
+  border: 1px solid var(--azure-gray-30);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-4);
+}
+
+.azure-card:hover {
+  border-color: var(--azure-blue-primary);
+}
+
+/* Azure Table */
+.azure-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.azure-table th {
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--azure-gray-130);
+  background: var(--azure-gray-10);
+  border-bottom: 1px solid var(--azure-gray-30);
+  white-space: nowrap;
+}
+
+.azure-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--azure-gray-30);
+  vertical-align: middle;
+}
+
+.azure-table tr:hover td {
+  background: var(--azure-gray-10);
+}
+
+.azure-table tr.selected td {
+  background: var(--azure-blue-bg);
+}
+
+/* Azure Link */
+.azure-link {
+  color: var(--azure-blue-primary);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.azure-link:hover {
+  text-decoration: underline;
+}
+
+/* Azure Badge/Tag */
+.azure-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+}
+
+.azure-badge-success {
+  background: var(--azure-success-bg);
+  color: var(--azure-success);
+}
+
+.azure-badge-error {
+  background: var(--azure-error-bg);
+  color: var(--azure-error);
+}
+
+.azure-badge-warning {
+  background: var(--azure-warning-bg);
+  color: #986f0b;
+}
+
+.azure-badge-info {
+  background: var(--azure-info-bg);
+  color: var(--azure-blue-dark);
+}
+
+/* Severity Badges */
+.sev-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  color: white;
+}
+
+.sev-0 { background: var(--sev0); }
+.sev-1 { background: var(--sev1); }
+.sev-2 { background: var(--sev2); color: #323130; }
+.sev-3 { background: var(--sev3); }
+.sev-4 { background: var(--sev4); }
+
+/* Azure Portal Header */
+.azure-header {
+  height: var(--header-height);
+  background: var(--azure-blue-primary);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+}
+
+.azure-header-search {
+  width: 280px;
+  height: 32px;
+  padding: 0 12px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: var(--radius-md);
+  color: white;
+  font-size: 13px;
+  outline: none;
+}
+
+.azure-header-search::placeholder {
+  color: rgba(255,255,255,0.7);
+}
+
+.azure-header-search:focus {
+  background: rgba(255,255,255,0.15);
+  border-color: rgba(255,255,255,0.4);
+}
+
+.azure-header-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: white;
+  cursor: pointer;
+}
+
+.azure-header-icon:hover {
+  background: rgba(255,255,255,0.1);
+}
+
+/* Azure Portal Navigation */
+.azure-nav {
+  width: 240px;
+  background: var(--azure-gray-20);
+  border-right: 1px solid var(--azure-gray-30);
+  overflow-y: auto;
+}
+
+.azure-nav-section {
+  padding: 8px 16px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--azure-gray-130);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.azure-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 16px;
+  font-size: 14px;
+  color: var(--azure-gray-160);
+  background: transparent;
+  border: none;
+  border-left: 2px solid transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.1s;
+}
+
+.azure-nav-item:hover {
+  background: rgba(255,255,255,0.5);
+}
+
+.azure-nav-item.active {
+  background: var(--azure-white);
+  border-left-color: var(--azure-blue-primary);
+  color: var(--azure-blue-primary);
+  font-weight: 600;
+}
+
+.azure-nav-item svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.azure-nav-badge {
+  margin-left: auto;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--sev1);
+  color: white;
+  border-radius: 10px;
+}
+
+/* Azure Breadcrumb */
+.azure-breadcrumb {
+  height: 40px;
+  background: var(--azure-white);
+  border-bottom: 1px solid var(--azure-gray-30);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  font-size: 14px;
+}
+
+.azure-breadcrumb a {
+  color: var(--azure-blue-primary);
+  text-decoration: none;
+}
+
+.azure-breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+.azure-breadcrumb-separator {
+  margin: 0 8px;
+  color: var(--azure-gray-90);
+}
+
+/* Azure Page Header */
+.azure-page-header {
+  background: var(--azure-white);
+  border-bottom: 1px solid var(--azure-gray-30);
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.azure-page-icon {
+  width: 40px;
+  height: 40px;
+  background: var(--azure-blue-primary);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.azure-page-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--azure-gray-160);
+  margin: 0;
+}
+
+.azure-page-subtitle {
+  font-size: 14px;
+  color: var(--azure-gray-130);
+  margin: 0;
+}
+
+/* Azure Tabs */
+.azure-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--azure-gray-30);
+}
+
+.azure-tab {
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--azure-gray-130);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  margin-bottom: -1px;
+}
+
+.azure-tab:hover {
+  color: var(--azure-gray-160);
+}
+
+.azure-tab.active {
+  color: var(--azure-blue-primary);
+  border-bottom-color: var(--azure-blue-primary);
+  font-weight: 600;
+}
+
+/* Azure Modal */
+.azure-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.azure-modal {
+  background: var(--azure-white);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-64);
+  max-width: 720px;
+  width: calc(100% - 32px);
+  max-height: calc(100vh - 64px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.azure-modal-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--azure-gray-30);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.azure-modal-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--azure-gray-160);
+  margin: 0;
+}
+
+.azure-modal-close {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--azure-gray-130);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+
+.azure-modal-close:hover {
+  background: var(--azure-gray-20);
+}
+
+.azure-modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.azure-modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--azure-gray-30);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ============================================================================
+   ELASTIC/KIBANA COMPONENTS
+   ============================================================================ */
+
+.eui-body {
+  background: var(--eui-color-empty-shade);
+  color: var(--eui-color-text);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+/* Elastic Header */
+.eui-header {
+  height: 48px;
+  background: #0a0b0d;
+  border-bottom: 1px solid var(--eui-color-light-shade);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+}
+
+.eui-header-logo {
+  color: var(--eui-color-primary);
+}
+
+/* Elastic Navigation */
+.eui-nav {
+  width: 240px;
+  background: #141519;
+  border-right: 1px solid var(--eui-color-light-shade);
+}
+
+.eui-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 16px;
+  font-size: 14px;
+  color: var(--eui-color-dark-shade);
+  background: transparent;
+  border: none;
+  border-left: 2px solid transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.eui-nav-item:hover {
+  color: var(--eui-color-full-shade);
+  background: var(--eui-color-empty-shade);
+}
+
+.eui-nav-item.active {
+  color: var(--eui-color-primary);
+  background: var(--eui-color-empty-shade);
+  border-left-color: var(--eui-color-primary);
+}
+
+/* Elastic Button */
+.eui-btn-primary {
+  height: 32px;
+  padding: 0 16px;
+  background: var(--eui-color-primary);
+  color: #000;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.eui-btn-primary:hover {
+  filter: brightness(1.1);
+}
+
+/* Elastic Card */
+.eui-card {
+  background: var(--eui-color-empty-shade);
+  border: 1px solid var(--eui-color-light-shade);
+  border-radius: 6px;
+}
+
+/* Elastic Table */
+.eui-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.eui-table th {
+  text-align: left;
+  padding: 12px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--eui-color-dark-shade);
+  background: #0a0b0d;
+  border-bottom: 1px solid var(--eui-color-light-shade);
+}
+
+.eui-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--eui-color-light-shade);
+  color: var(--eui-color-darkest-shade);
+}
+
+.eui-table tr:hover td {
+  background: #0a0b0d;
+}
+
+/* Log Viewer - Shared */
+.log-viewer {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.log-error { color: #d13438; }
+.log-warn { color: #ffaa44; }
+.log-info { color: #0078d4; }
+.log-debug { color: #8a8886; }
