@@ -45,7 +45,10 @@ Or manually:
 3. Select **Settings** from the dropdown
 4. Click **API Keys** in the left sidebar
 
-![Devin Settings Navigation](./images/devin-settings-nav.png)
+For detailed information on API key types and authentication, see the official Devin documentation:
+
+![Devin Authentication Documentation](./images/devin-authentication-docs.jpg)
+*Screenshot from [docs.devin.ai/api-reference/authentication](https://docs.devin.ai/api-reference/authentication)*
 
 ### 1.2 Create a New API Key
 
@@ -53,8 +56,6 @@ Or manually:
 2. Enter a descriptive name: `Azure Monitor Triage`
 3. Click **Create**
 4. **Copy the key immediately** — it won't be shown again!
-
-![Devin API Key Creation](./images/devin-create-api-key.png)
 
 > ⚠️ **Important:** Store this key securely. You'll need it in Step 2.
 
@@ -141,13 +142,14 @@ Or manually:
 4. In the left sidebar, click **Alerts**
 5. Click **Action groups** in the top menu bar
 
-![Azure Monitor Action Groups](./images/azure-action-groups-nav.png)
+For the complete Action Groups guide with screenshots, see the [official Microsoft documentation](https://learn.microsoft.com/en-us/azure/azure-monitor/alerts/action-groups):
+
+![Azure Action Groups Documentation](./images/azure-action-groups-docs.jpg)
+*Screenshot from [Microsoft Learn - Action Groups](https://learn.microsoft.com/en-us/azure/azure-monitor/alerts/action-groups)*
 
 ### 3.2 Create New Action Group
 
 1. Click **+ Create** button (top left)
-
-![Create Action Group Button](./images/azure-create-action-group.png)
 
 ### 3.3 Configure Basics Tab
 
@@ -160,8 +162,6 @@ Fill in the following fields:
 | **Region** | `Global` | Recommended for webhooks |
 | **Action group name** | `ag-devin-triage` | Must be unique in resource group |
 | **Display name** | `Devin AI Triage` | Max 12 characters, shown in notifications |
-
-![Action Group Basics](./images/azure-action-group-basics.png)
 
 Click **Next: Notifications >**
 
@@ -181,8 +181,6 @@ Add email notifications so your team knows when Devin is triggered:
 
 4. Click **OK**
 
-![Action Group Notifications](./images/azure-action-group-notifications.png)
-
 Click **Next: Actions >**
 
 ### 3.5 Configure Actions Tab (Critical!)
@@ -192,8 +190,6 @@ This is where you add the Devin webhook:
 1. Click **+ Add action**
 2. Select **Webhook** as the Action type
 
-![Add Webhook Action](./images/azure-add-webhook.png)
-
 3. Configure the webhook:
 
 | Field | Value |
@@ -202,8 +198,6 @@ This is where you add the Devin webhook:
 | **URI** | Your webhook URL from Step 2 |
 | | e.g., `https://your-app.vercel.app/api/trigger-devin` |
 | **Enable common alert schema** | ✅ **Yes** (Required!) |
-
-![Webhook Configuration](./images/azure-webhook-config.png)
 
 > ⚠️ **Critical:** You MUST enable "Common alert schema" for the integration to work correctly.
 
@@ -217,8 +211,6 @@ Click **Next: Tags >** (optional), then **Next: Review + create >**
 2. Click **Create**
 
 You'll see a notification: "Action group created successfully"
-
-![Action Group Created](./images/azure-action-group-created.png)
 
 ---
 
@@ -238,7 +230,10 @@ This example creates an alert for application errors.
 
 1. Click **+ Create** → **Alert rule**
 
-![Create Alert Rule](./images/azure-create-alert-rule.png)
+For the complete Log Alert Rule guide with screenshots, see the [official Microsoft documentation](https://learn.microsoft.com/en-us/azure/azure-monitor/alerts/alerts-create-log-alert-rule):
+
+![Azure Log Alert Rule Documentation](./images/azure-log-alert-rule-docs.jpg)
+*Screenshot from [Microsoft Learn - Create Log Alert Rule](https://learn.microsoft.com/en-us/azure/azure-monitor/alerts/alerts-create-log-alert-rule)*
 
 #### Scope Tab
 
@@ -247,14 +242,10 @@ This example creates an alert for application errors.
 4. Select your resource
 5. Click **Apply**
 
-![Select Scope](./images/azure-alert-scope.png)
-
 #### Condition Tab
 
 6. Click **+ Add condition**
 7. Select **Custom log search**
-
-![Add Condition](./images/azure-alert-condition.png)
 
 8. Enter your KQL query:
 
@@ -292,8 +283,6 @@ AppTraces
 | **Threshold value** | 0 | Alert on any match |
 | **Frequency of evaluation** | 5 minutes | How often to check |
 
-![Alert Logic](./images/azure-alert-logic.png)
-
 Click **Next: Actions >**
 
 #### Actions Tab
@@ -301,8 +290,6 @@ Click **Next: Actions >**
 10. Click **+ Select action groups**
 11. Find and select `ag-devin-triage`
 12. Click **Select**
-
-![Select Action Group](./images/azure-select-action-group.png)
 
 Click **Next: Details >**
 
@@ -319,8 +306,6 @@ Click **Next: Details >**
 | **Alert rule description** | `Triggers Devin AI when application errors are detected` |
 | **Region** | Your region |
 | **Enable upon creation** | ✅ Yes |
-
-![Alert Details](./images/azure-alert-details.png)
 
 Click **Review + create** → **Create**
 
@@ -358,8 +343,6 @@ Alert Processing Rules let you automatically apply Action Groups to alerts based
 ### 5.1 Create the Rule
 
 1. Click **+ Create**
-
-![Create Processing Rule](./images/azure-create-processing-rule.png)
 
 ### 5.2 Configure Scope
 
@@ -447,8 +430,6 @@ Expected response:
 1. Go to [https://app.devin.ai/sessions](https://app.devin.ai/sessions)
 2. Find the new session
 3. Watch Devin analyze and triage the alert!
-
-![Devin Session](./images/devin-session-view.png)
 
 ### 6.3 Test with a Real Alert
 

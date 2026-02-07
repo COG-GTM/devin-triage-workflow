@@ -97,14 +97,15 @@ https://your-deployment.kb.region.aws.elastic.cloud/app/management/insightsAndAl
 2. Scroll down to **Stack Management**
 3. Under **Alerts and Insights**, click **Connectors**
 
-![Kibana Connectors Navigation](./images/kibana-connectors-nav.png)
+For the complete webhook connector guide with screenshots, see the [official Elastic documentation](https://www.elastic.co/docs/reference/kibana/connectors-kibana/webhook-action-type):
+
+![Kibana Webhook Connector Documentation](./images/kibana-webhook-connector-docs.jpg)
+*Screenshot from [Elastic Docs - Webhook Connector](https://www.elastic.co/docs/reference/kibana/connectors-kibana/webhook-action-type)*
 
 ### 3.2 Create Webhook Connector
 
 1. Click **Create connector** button (top right)
 2. Select **Webhook** from the connector types
-
-![Select Webhook Connector](./images/kibana-select-webhook.png)
 
 ### 3.3 Configure the Connector
 
@@ -132,8 +133,6 @@ Click **Add header** and add:
 |--------|-------|
 | `Content-Type` | `application/json` |
 
-![Webhook Configuration](./images/kibana-webhook-config.png)
-
 ### 3.4 Test the Connector
 
 1. Click **Save & test**
@@ -150,8 +149,6 @@ Click **Add header** and add:
 
 3. Click **Run**
 4. You should see: **"Connector was executed successfully"**
-
-![Connector Test Success](./images/kibana-connector-test.png)
 
 5. Click **Save**
 
@@ -177,7 +174,10 @@ This fires when error log count exceeds a threshold.
 1. Click **Create rule**
 2. Select rule type: **Log threshold** (under Observability)
 
-![Select Log Threshold](./images/kibana-log-threshold.png)
+For the complete Elastic alerting guide, see the [official documentation](https://www.elastic.co/docs/explore-analyze/alerts-cases):
+
+![Elastic Alerts Overview](./images/elastic-alerts-overview-docs.jpg)
+*Screenshot from [Elastic Docs - Alerts and Cases](https://www.elastic.co/docs/explore-analyze/alerts-cases)*
 
 #### Configure Rule Settings
 
@@ -200,8 +200,6 @@ This fires when error log count exceeds a threshold.
 | **FOR THE LAST** | `5 minutes` |
 | **GROUP BY** | `service.name` (optional) |
 
-![Log Threshold Condition](./images/kibana-log-threshold-config.png)
-
 > **KQL Examples:**
 > - All errors: `log.level: error OR log.level: ERROR`
 > - Auth errors: `message: *authentication* AND log.level: error`
@@ -212,8 +210,6 @@ This fires when error log count exceeds a threshold.
 4. Scroll to **Actions**
 5. Click **Add action**
 6. Select your connector: `Devin AI Triage`
-
-![Select Connector](./images/kibana-select-connector-action.png)
 
 7. Configure the webhook body:
 
@@ -337,8 +333,6 @@ Stack Management → Watcher
 ### 5.2 Create a Watch
 
 1. Click **Create** → **Create advanced watch**
-
-![Create Advanced Watch](./images/kibana-create-watch.png)
 
 2. Enter Watch ID: `devin-error-triage`
 3. Enter Watch name: `Devin Error Triage`
