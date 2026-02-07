@@ -112,7 +112,7 @@ You need a publicly accessible endpoint that receives alerts and calls the Devin
 
 **Reference implementation:** See [`demo-ui/src/app/api/trigger-devin/route.ts`](./demo-ui/src/app/api/trigger-devin/route.ts)
 
-Deploy this endpoint to your preferred platform (Azure Functions, AWS Lambda, Cloud Run, etc.) with these environment variables:
+Deploy this endpoint to Azure Functions with these environment variables:
 
 | Variable | Description | Where to Get |
 |----------|-------------|--------------|
@@ -222,7 +222,7 @@ You should receive a response with a Devin session URL.
 | **Full-Text Search** | Powerful log analysis with Lucene and ES Query DSL |
 | **Cross-Service Correlation** | Trace issues across microservices automatically |
 | **Long-Term Retention** | Configurable data retention for compliance |
-| **Multi-Cloud** | Works with AWS, Azure, GCP, or on-prem |
+| **Multi-Cloud** | Works with any cloud or on-prem |
 
 ### When to Choose Elastic
 
@@ -343,7 +343,7 @@ await redis.set(alertKey, 'processing', 'EX', 300);
 | [Comparison Guide](./docs/COMPARISON.md) | Detailed feature comparison and decision matrix |
 | [Devin Playbook](./docs/DEVIN-PLAYBOOK.md) | The 7-phase triage methodology |
 | [API Reference](./docs/API-REFERENCE.md) | Webhook endpoint documentation |
-| [Deployment Guide](./docs/DEPLOYMENT.md) | Platform options: Azure Functions, AWS Lambda, etc. |
+| [Deployment Guide](./docs/DEPLOYMENT.md) | Azure Functions deployment |
 
 ---
 

@@ -321,7 +321,7 @@ These alerts waste Devin sessions because the fix isn't in your codebase:
 
 | Scenario | Why Elastic |
 |----------|-------------|
-| **Multi-cloud environment** | AWS + Azure + GCP logs in one place |
+| **Multi-cloud environment** | Logs from any cloud in one place |
 | **Complex log correlation** | Trace errors across microservices |
 | **ML anomaly detection** | "Something unusual is happening" |
 | **Security/SIEM** | Compliance, audit, threat detection |

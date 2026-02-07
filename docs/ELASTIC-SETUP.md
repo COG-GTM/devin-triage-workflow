@@ -69,11 +69,10 @@ You need a publicly accessible URL that Kibana can call when alerts fire.
 
 The webhook endpoint code is in [`demo-ui/src/app/api/trigger-devin/route.ts`](../demo-ui/src/app/api/trigger-devin/route.ts)
 
-Deploy this to your preferred platform (Azure Functions, AWS Lambda, Cloud Run, or any serverless platform).
+Deploy this to Azure Functions. Your endpoint URL will look like:
 
-Your endpoint URL will look like:
 ```
-https://your-endpoint.azurewebsites.net/api/trigger-devin
+https://fn-devin-triage.azurewebsites.net/api/trigger-devin?code=YOUR_FUNCTION_KEY
 ```
 
 See [Deployment Guide](./DEPLOYMENT.md) for platform-specific instructions.

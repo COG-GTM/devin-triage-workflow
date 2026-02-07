@@ -44,11 +44,7 @@ The endpoint will be available at `http://localhost:3000/api/trigger-devin`
 
 ## Deployment
 
-Adapt this code for your preferred platform:
-
-- **Azure Functions** — See [Deployment Guide](../docs/DEPLOYMENT.md#azure-functions-deployment)
-- **AWS Lambda** — See [Deployment Guide](../docs/DEPLOYMENT.md#aws-lambda-deployment)
-- **Google Cloud Run** — See [Deployment Guide](../docs/DEPLOYMENT.md#google-cloud-run)
+Deploy to Azure Functions — See [Deployment Guide](../docs/DEPLOYMENT.md)
 
 ## Testing
 

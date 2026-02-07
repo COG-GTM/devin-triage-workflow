@@ -1,6 +1,6 @@
 # Deployment Guide
 
-> **Deploy the webhook endpoint to your preferred serverless platform.**
+> **Deploy the webhook endpoint to Azure Functions.**
 
 The webhook receives alerts from Azure Monitor or Elastic and creates Devin sessions.
 
@@ -10,11 +10,9 @@ The webhook receives alerts from Azure Monitor or Elastic and creates Devin sess
 
 1. [Overview](#overview)
 2. [Azure Functions Deployment](#azure-functions-deployment)
-3. [AWS Lambda Deployment](#aws-lambda-deployment)
-4. [Google Cloud Run](#google-cloud-run)
-5. [Docker/Kubernetes](#dockerkubernetes)
-6. [Environment Variables](#environment-variables)
-7. [Security Best Practices](#security-best-practices)
+3. [Environment Variables](#environment-variables)
+4. [Security Best Practices](#security-best-practices)
+5. [Docker/Kubernetes (Optional)](#dockerkubernetes-optional)
 
 ---
 
@@ -27,15 +25,13 @@ The webhook endpoint code is in:
 demo-ui/src/app/api/trigger-devin/route.ts
 ```
 
-This is a Next.js API route, but the core logic can be adapted to any platform.
-
 ### What the Endpoint Does
 
 ```typescript
-// Receives alert payload
+// Receives alert payload from Azure Monitor
 const { alertName, severity, description, logs } = await request.json();
 
-// Calls Devin API to create a session
+// Calls Devin API to create a triage session
 const response = await fetch('https://api.devin.ai/v1/sessions', {
   method: 'POST',
   headers: {
@@ -51,30 +47,31 @@ const response = await fetch('https://api.devin.ai/v1/sessions', {
 return { sessionId, sessionUrl };
 ```
 
-### Required Environment Variables
-
-| Variable | Description |
-|----------|-------------|
-| `DEVIN_API_KEY` | Your Devin API key |
-| `TARGET_REPO` | GitHub repo Devin will analyze |
-
 ---
 
 ## Azure Functions Deployment
-
-Deploy as an Azure Function for native Azure integration.
 
 ### Step 1: Create Function App
 
 **Direct Link:** [portal.azure.com/#create/Microsoft.FunctionApp](https://portal.azure.com/#create/Microsoft.FunctionApp)
 
+Or manually:
+1. Go to [Azure Portal](https://portal.azure.com)
+2. Click **Create a resource**
+3. Search for **Function App**
+4. Click **Create**
+
 Configure:
 
 | Field | Value |
 |-------|-------|
+| **Subscription** | Your subscription |
+| **Resource Group** | `rg-devin-triage` (create new) |
 | **Function App name** | `fn-devin-triage` |
-| **Runtime stack** | Node.js 18 LTS |
+| **Runtime stack** | Node.js |
+| **Version** | 18 LTS |
 | **Region** | Your region |
+| **Operating System** | Linux |
 | **Plan type** | Consumption (Serverless) |
 
 Click **Review + create** → **Create**
@@ -88,6 +85,8 @@ Click **Review + create** → **Create**
 5. Authorization level: `Function`
 
 ### Step 3: Add Function Code
+
+Replace the default code with:
 
 ```javascript
 const { app } = require('@azure/functions');
@@ -103,10 +102,11 @@ app.http('trigger-devin', {
             if (!alertName || severity === undefined) {
                 return {
                     status: 400,
-                    jsonBody: { error: 'Missing required fields' }
+                    jsonBody: { error: 'Missing required fields: alertName and severity' }
                 };
             }
             
+            // Create Devin session
             const response = await fetch('https://api.devin.ai/v1/sessions', {
                 method: 'POST',
                 headers: {
@@ -115,33 +115,58 @@ app.http('trigger-devin', {
                 },
                 body: JSON.stringify({
                     prompt: `
-                        Triage this production alert:
-                        - Alert: ${alertName}
-                        - Severity: ${severity}
-                        - Description: ${description}
-                        - Repository: ${process.env.TARGET_REPO}
-                        - Logs: ${logs || 'Not provided'}
-                        
-                        Analyze the codebase, identify the root cause, and create a PR with a fix.
-                    `
+You are an SRE triaging a production alert.
+
+## Alert Details
+- **Alert Name**: ${alertName}
+- **Severity**: Sev ${severity}
+- **Description**: ${description || 'Not provided'}
+
+## Error Logs
+\`\`\`
+${logs || 'No logs provided'}
+\`\`\`
+
+## Your Tasks
+1. Clone the repository: ${process.env.TARGET_REPO}
+2. Analyze the error and identify the root cause
+3. Create a fix with proper error handling
+4. Write tests for the fix
+5. Create a Pull Request
+
+Begin triage.
+                    `,
+                    playbook_id: process.env.DEVIN_PLAYBOOK_ID || 'devin-triage-workflow'
                 })
             });
             
+            if (!response.ok) {
+                const error = await response.text();
+                context.error('Devin API error:', error);
+                return {
+                    status: 500,
+                    jsonBody: { error: 'Failed to create Devin session', details: error }
+                };
+            }
+            
             const session = await response.json();
+            
+            context.log('Devin session created:', session.session_id);
             
             return {
                 status: 200,
                 jsonBody: {
                     success: true,
                     sessionId: session.session_id,
-                    sessionUrl: session.url
+                    sessionUrl: session.url,
+                    message: 'Devin session created successfully'
                 }
             };
         } catch (error) {
             context.error('Error:', error);
             return {
                 status: 500,
-                jsonBody: { error: 'Failed to create Devin session' }
+                jsonBody: { error: 'Internal server error', message: error.message }
             };
         }
     }
@@ -151,168 +176,112 @@ app.http('trigger-devin', {
 ### Step 4: Configure Environment Variables
 
 1. Go to Function App → **Configuration** → **Application settings**
-2. Add:
-   - `DEVIN_API_KEY`: Your Devin API key
-   - `TARGET_REPO`: Your GitHub repo URL
+2. Click **+ New application setting** for each:
+
+| Name | Value |
+|------|-------|
+| `DEVIN_API_KEY` | Your Devin API key from [app.devin.ai/settings/api-keys](https://app.devin.ai/settings/api-keys) |
+| `TARGET_REPO` | Your GitHub repository URL (e.g., `https://github.com/your-org/your-repo`) |
+| `DEVIN_PLAYBOOK_ID` | `devin-triage-workflow` (optional) |
+
 3. Click **Save**
+4. **Restart** the Function App
 
 ### Step 5: Get Function URL
 
-Go to your function → **Get function URL**
+1. Go to your function → **Get function URL**
+2. Copy the URL (includes function key)
 
 Example:
 ```
 https://fn-devin-triage.azurewebsites.net/api/trigger-devin?code=abc123...
 ```
 
----
+This is the URL you'll use in your Azure Monitor Action Group.
 
-## AWS Lambda Deployment
-
-Deploy as an AWS Lambda function with API Gateway.
-
-### Step 1: Create Lambda Function
-
-1. Go to [AWS Lambda Console](https://console.aws.amazon.com/lambda)
-2. Click **Create function**
-3. Configure:
-
-| Field | Value |
-|-------|-------|
-| **Function name** | `devin-triage` |
-| **Runtime** | Node.js 18.x |
-
-### Step 2: Add Function Code
-
-```javascript
-export const handler = async (event) => {
-    try {
-        const body = JSON.parse(event.body);
-        const { alertName, severity, description, logs } = body;
-        
-        if (!alertName || severity === undefined) {
-            return {
-                statusCode: 400,
-                body: JSON.stringify({ error: 'Missing required fields' })
-            };
-        }
-        
-        const response = await fetch('https://api.devin.ai/v1/sessions', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${process.env.DEVIN_API_KEY}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                prompt: `
-                    Triage this production alert:
-                    - Alert: ${alertName}
-                    - Severity: ${severity}
-                    - Description: ${description}
-                    - Repository: ${process.env.TARGET_REPO}
-                    - Logs: ${logs || 'Not provided'}
-                    
-                    Analyze the codebase, identify the root cause, and create a PR with a fix.
-                `
-            })
-        });
-        
-        const session = await response.json();
-        
-        return {
-            statusCode: 200,
-            body: JSON.stringify({
-                success: true,
-                sessionId: session.session_id,
-                sessionUrl: session.url
-            })
-        };
-    } catch (error) {
-        console.error('Error:', error);
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ error: 'Failed to create session' })
-        };
-    }
-};
-```
-
-### Step 3: Configure Environment Variables
-
-1. Go to **Configuration** → **Environment variables**
-2. Add:
-   - `DEVIN_API_KEY`: Your API key
-   - `TARGET_REPO`: Your repo URL
-
-### Step 4: Add Function URL
-
-1. Go to **Configuration** → **Function URL**
-2. Click **Create function URL**
-3. Auth type: `NONE` (or IAM for secured)
-
-Your endpoint:
-```
-https://abc123.lambda-url.us-east-1.on.aws/
-```
-
----
-
-## Google Cloud Run
-
-Deploy as a Cloud Run service.
-
-### Step 1: Create Dockerfile
-
-```dockerfile
-FROM node:18-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
-COPY . .
-EXPOSE 8080
-CMD ["node", "server.js"]
-```
-
-### Step 2: Create server.js
-
-```javascript
-const express = require('express');
-const app = express();
-app.use(express.json());
-
-app.post('/api/trigger-devin', async (req, res) => {
-    const { alertName, severity, description, logs } = req.body;
-    
-    const response = await fetch('https://api.devin.ai/v1/sessions', {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${process.env.DEVIN_API_KEY}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            prompt: `Triage alert: ${alertName}...`
-        })
-    });
-    
-    const session = await response.json();
-    res.json({ success: true, sessionUrl: session.url });
-});
-
-app.listen(8080);
-```
-
-### Step 3: Deploy
+### Step 6: Test the Function
 
 ```bash
-gcloud run deploy devin-triage \
-  --source . \
-  --set-env-vars DEVIN_API_KEY=your-key,TARGET_REPO=your-repo \
-  --allow-unauthenticated
+curl -X POST "https://fn-devin-triage.azurewebsites.net/api/trigger-devin?code=YOUR_FUNCTION_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "alertName": "test-alert",
+    "severity": 1,
+    "description": "Testing Azure Function deployment",
+    "logs": "Error: Test error at line 42"
+  }'
+```
+
+Expected response:
+```json
+{
+  "success": true,
+  "sessionId": "session_1234567890",
+  "sessionUrl": "https://app.devin.ai/sessions/session_1234567890",
+  "message": "Devin session created successfully"
+}
 ```
 
 ---
 
-## Docker/Kubernetes
+## Environment Variables
+
+### Required
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `DEVIN_API_KEY` | Devin API key | `apk_user_abc123...` |
+| `TARGET_REPO` | Repository Devin will analyze | `https://github.com/org/repo` |
+
+### Optional
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DEVIN_PLAYBOOK_ID` | Playbook to use | `devin-triage-workflow` |
+| `WEBHOOK_SECRET` | Secret for additional auth | None |
+
+### Using Azure Key Vault (Recommended)
+
+For production, store secrets in Key Vault:
+
+1. Create a Key Vault in Azure Portal
+2. Add your `DEVIN_API_KEY` as a secret
+3. In Function App → **Configuration** → **Application settings**
+4. Use Key Vault reference: `@Microsoft.KeyVault(VaultName=your-vault;SecretName=devin-api-key)`
+
+---
+
+## Security Best Practices
+
+### 1. Use Function-Level Authorization
+
+The Function already requires a function key (`?code=...`). This prevents unauthorized calls.
+
+### 2. Use Managed Identity
+
+For enhanced security, use Azure Managed Identity with Key Vault:
+
+```bash
+# Enable system-assigned managed identity
+az functionapp identity assign --name fn-devin-triage --resource-group rg-devin-triage
+
+# Grant Key Vault access
+az keyvault set-policy --name your-keyvault \
+  --object-id <managed-identity-object-id> \
+  --secret-permissions get
+```
+
+### 3. Network Restrictions (Optional)
+
+Restrict to Azure Monitor IPs:
+1. Go to Function App → **Networking** → **Access restriction**
+2. Add rules for Azure Monitor service tag
+
+---
+
+## Docker/Kubernetes (Optional)
+
+If you prefer containerized deployment:
 
 ### Dockerfile
 
@@ -328,97 +297,47 @@ EXPOSE 3000
 CMD ["npm", "start"]
 ```
 
-### Kubernetes Deployment
+### Deploy to Azure Container Apps
 
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: devin-triage
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: devin-triage
-  template:
-    spec:
-      containers:
-      - name: devin-triage
-        image: your-registry/devin-triage:latest
-        ports:
-        - containerPort: 3000
-        env:
-        - name: DEVIN_API_KEY
-          valueFrom:
-            secretKeyRef:
-              name: devin-secrets
-              key: api-key
-        - name: TARGET_REPO
-          value: "https://github.com/your-org/your-repo"
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: devin-triage
-spec:
-  type: LoadBalancer
-  ports:
-  - port: 80
-    targetPort: 3000
-  selector:
-    app: devin-triage
+```bash
+# Build and push to Azure Container Registry
+az acr build --registry your-registry --image devin-triage:latest .
+
+# Deploy to Container Apps
+az containerapp create \
+  --name devin-triage \
+  --resource-group rg-devin-triage \
+  --image your-registry.azurecr.io/devin-triage:latest \
+  --env-vars DEVIN_API_KEY=your-key TARGET_REPO=your-repo \
+  --ingress external \
+  --target-port 3000
 ```
 
 ---
 
-## Environment Variables
+## Troubleshooting
 
-### Required
+### Function Not Responding
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `DEVIN_API_KEY` | Devin API key | `apk_user_abc123...` |
-| `TARGET_REPO` | Repository to analyze | `https://github.com/org/repo` |
+1. Check **Monitor** → **Logs** in Azure Portal
+2. Verify environment variables are set
+3. Ensure Function App is running
 
-### Optional
+### Devin Session Not Created
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `WEBHOOK_SECRET` | Secret for webhook auth | None |
-| `DEVIN_PLAYBOOK_ID` | Playbook to use | `devin-triage-workflow` |
+1. Verify `DEVIN_API_KEY` is valid
+2. Check [status.devin.ai](https://status.devin.ai) for API status
+3. Review function logs for error details
 
----
+### 401/403 Errors
 
-## Security Best Practices
-
-### 1. Use Webhook Secrets
-
-```typescript
-const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
-
-if (WEBHOOK_SECRET) {
-  const authHeader = request.headers.get('Authorization');
-  if (authHeader !== `Bearer ${WEBHOOK_SECRET}`) {
-    return { status: 401, body: 'Unauthorized' };
-  }
-}
-```
-
-### 2. Store Secrets Securely
-
-- **Azure:** Use Key Vault references in App Settings
-- **AWS:** Use Secrets Manager or Parameter Store
-- **GCP:** Use Secret Manager
-
-### 3. Restrict Network Access
-
-- Use IP allowlists where possible
-- Azure Monitor IPs: [Microsoft IP Ranges](https://www.microsoft.com/en-us/download/details.aspx?id=56519)
+1. Verify function key is included in URL
+2. Check API key permissions in Devin dashboard
 
 ---
 
 ## Next Steps
 
-- [Azure Monitor Setup](./AZURE-MONITOR-SETUP.md) — Configure Azure alerts
+- [Azure Monitor Setup](./AZURE-MONITOR-SETUP.md) — Configure alerts to call this function
 - [Elastic Setup](./ELASTIC-SETUP.md) — Configure Elastic alerts
 - [Use Cases](./USE-CASES.md) — When to use this architecture

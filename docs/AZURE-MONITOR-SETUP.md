@@ -79,7 +79,7 @@ You need a publicly accessible URL that Azure can call when alerts fire.
 
 The webhook endpoint code is in [`demo-ui/src/app/api/trigger-devin/route.ts`](../demo-ui/src/app/api/trigger-devin/route.ts)
 
-Deploy this to your preferred platform (Azure Functions, AWS Lambda, Cloud Run, or any serverless platform).
+Deploy this to Azure Functions.
 
 ### Required Environment Variables
 
@@ -93,9 +93,7 @@ Deploy this to your preferred platform (Azure Functions, AWS Lambda, Cloud Run, 
 After deployment, your webhook URL will look like:
 
 ```
-https://your-endpoint.azurewebsites.net/api/trigger-devin
-https://your-function.lambda-url.us-east-1.on.aws/
-https://your-service-abc123.run.app/api/trigger-devin
+https://fn-devin-triage.azurewebsites.net/api/trigger-devin?code=YOUR_FUNCTION_KEY
 ```
 
 Copy this URL — you'll need it in Step 3.
@@ -445,10 +443,10 @@ Expected response:
 
 ### View Function Logs
 
-Check logs in your deployment platform:
-- **Azure Functions:** Azure Portal → Function App → Monitor → Logs
-- **AWS Lambda:** CloudWatch Logs
-- **Cloud Run:** Cloud Console → Logs
+Check logs in Azure Portal:
+1. Go to your **Function App**
+2. Click **Monitor** → **Logs**
+3. Or use **Application Insights** for detailed tracing
 
 ### Devin Session Not Created
 

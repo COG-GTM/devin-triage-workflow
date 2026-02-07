@@ -57,7 +57,6 @@ Set `WEBHOOK_SECRET` in your deployment platform:
 WEBHOOK_SECRET=your-secret-key-here
 
 # Azure Functions: Configuration → Application settings
-# AWS Lambda: Configuration → Environment variables
 ```
 
 #### 2. Update the Route Handler
@@ -386,21 +385,13 @@ $response
 
 ### Setting Environment Variables
 
-Configure these in your deployment platform:
+Configure in Azure Functions:
 
-**Azure Functions:**
 1. Go to Azure Portal → Function App → **Configuration**
-2. Add each variable under **Application settings**
-
-**AWS Lambda:**
-1. Go to Lambda Console → Your Function → **Configuration**
-2. Add each variable under **Environment variables**
-
-**Google Cloud Run:**
-```bash
-gcloud run services update SERVICE_NAME \
-  --set-env-vars DEVIN_API_KEY=your-key,TARGET_REPO=your-repo
-```
+2. Click **+ New application setting**
+3. Add each variable
+4. Click **Save**
+5. **Restart** the Function App
 
 ---
 
