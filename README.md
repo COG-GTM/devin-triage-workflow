@@ -58,6 +58,32 @@ Use Azure Monitor for quick metric alerts + Elastic for deep log analysis and ML
 
 ---
 
+## ⚠️ Before You Start: Is This Right for Your Alerts?
+
+**The golden rule:** Devin is a software engineer, not a cloud administrator.
+
+### ✅ Trigger Devin When:
+| Alert Type | Why It Works |
+|------------|--------------|
+| **Application exceptions** | Devin can fix bugs in YOUR code |
+| **API integration failures** | Devin can fix YOUR error handling |
+| **Token/auth handling errors** | Devin can add retry logic to YOUR code |
+| **Database query bugs** | Devin can fix YOUR queries |
+| **Parsing/validation errors** | Devin can improve YOUR validation |
+
+### ❌ Don't Trigger Devin When:
+| Alert Type | Why It Fails |
+|------------|--------------|
+| **Azure IAM/permissions** | Devin can't modify your AD configuration |
+| **Infrastructure failures** | Devin can't restart VMs or resize disks |
+| **External service outages** | Devin can't fix Stripe being down |
+| **Certificate expiration** | Devin can't renew your SSL certs |
+| **User input errors** | Not a bug — expected behavior |
+
+**→ [Full Use Cases & Best Practices Guide](./docs/USE-CASES.md)** — Detailed examples, alert configuration tips, and anti-patterns to avoid.
+
+---
+
 ## 🚀 Quick Start (15 minutes)
 
 ### Step 1: Get Your Devin API Key
@@ -318,6 +344,7 @@ await redis.set(alertKey, 'processing', 'EX', 300);
 
 | Guide | Description |
 |-------|-------------|
+| [**Use Cases & Best Practices**](./docs/USE-CASES.md) | **Start here** — When to use, when not to, alert tuning |
 | [Azure Monitor Setup](./docs/AZURE-MONITOR-SETUP.md) | Step-by-step Azure configuration with portal links |
 | [Elastic Setup](./docs/ELASTIC-SETUP.md) | Kibana alerting, Watcher, and ML setup |
 | [Comparison Guide](./docs/COMPARISON.md) | Detailed feature comparison and decision matrix |
