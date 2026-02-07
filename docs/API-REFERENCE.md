@@ -508,6 +508,18 @@ async function createSessionWithRetry(payload: any, retries = 3): Promise<any> {
 
 ## Devin API Reference
 
+This workflow uses the **Devin v1 API** to create sessions. Below is a summary of the key endpoints.
+
+### API Key Types
+
+| Key Type | Prefix | Use Case | Where to Create |
+|----------|--------|----------|-----------------|
+| **Personal API Key** | `apk_user_*` | Testing, personal automation | [Settings → API Keys](https://app.devin.ai/settings/api-keys) |
+| **Service API Key** | `apk_*` | Team automation, CI/CD | [Settings → API Keys](https://app.devin.ai/settings/api-keys) |
+| **Service User (v3)** | `cog_*` | Enterprise with RBAC | [Enterprise → Service Users](https://app.devin.ai/settings/enterprise/service-users) |
+
+> 📚 **Full details:** [Authentication & API Keys](https://docs.devin.ai/api-reference/authentication)
+
 ### Create Session Endpoint
 
 ```
@@ -520,7 +532,7 @@ Content-Type: application/json
 ```json
 {
   "prompt": "Your task description here...",
-  "playbook_id": "optional-playbook-id"
+  "idempotent": true
 }
 ```
 
@@ -529,15 +541,111 @@ Content-Type: application/json
 {
   "session_id": "session_1707228000000",
   "url": "https://app.devin.ai/sessions/session_1707228000000",
-  "status": "created"
+  "status": "running"
 }
 ```
 
-### Devin API Documentation
+> 📚 **Full details:** [v1 Create Session](https://docs.devin.ai/api-reference/v1/sessions/create-a-new-devin-session)
 
-- **API Reference:** [docs.devin.ai/api-reference](https://docs.devin.ai/api-reference)
-- **Playbooks:** [docs.devin.ai/playbooks](https://docs.devin.ai/playbooks)
-- **Rate Limits:** [docs.devin.ai/rate-limits](https://docs.devin.ai/rate-limits)
+### Monitor Session Status
+
+```
+GET https://api.devin.ai/v1/sessions/{session_id}
+Authorization: Bearer {DEVIN_API_KEY}
+```
+
+**Response:**
+```json
+{
+  "session_id": "session_1707228000000",
+  "status_enum": "running",
+  "url": "https://app.devin.ai/sessions/session_1707228000000"
+}
+```
+
+Status values: `running`, `blocked`, `finished`
+
+### Send Message to Session
+
+```
+POST https://api.devin.ai/v1/sessions/{session_id}/message
+Authorization: Bearer {DEVIN_API_KEY}
+Content-Type: application/json
+```
+
+**Request:**
+```json
+{
+  "message": "Make sure to write unit tests when done."
+}
+```
+
+### Session Secrets (Temporary Credentials)
+
+Pass temporary credentials that are only available for a single session:
+
+```json
+{
+  "prompt": "Deploy to staging",
+  "session_secrets": [
+    {
+      "key": "DEPLOY_API_KEY",
+      "value": "temp-key-12345",
+      "sensitive": true
+    }
+  ]
+}
+```
+
+> 📚 **Full details:** [v1 Usage Examples](https://docs.devin.ai/api-reference/v1/usage-examples)
+
+### Complete Python Example
+
+```python
+import os
+import requests
+import time
+
+DEVIN_API_KEY = os.getenv("DEVIN_API_KEY")
+
+# Create a new session
+response = requests.post(
+    "https://api.devin.ai/v1/sessions",
+    headers={"Authorization": f"Bearer {DEVIN_API_KEY}"},
+    json={
+        "prompt": "Triage production alert: auth token expired...",
+        "idempotent": True
+    }
+)
+
+session = response.json()
+print(f"Session created: {session['url']}")
+
+# Monitor session status
+while True:
+    status = requests.get(
+        f"https://api.devin.ai/v1/sessions/{session['session_id']}",
+        headers={"Authorization": f"Bearer {DEVIN_API_KEY}"}
+    ).json()
+    
+    print(f"Status: {status['status_enum']}")
+    
+    if status["status_enum"] in ["blocked", "finished"]:
+        break
+    
+    time.sleep(5)
+```
+
+### Official Devin Documentation
+
+| Resource | Link |
+|----------|------|
+| **Authentication & API Keys** | [docs.devin.ai/api-reference/authentication](https://docs.devin.ai/api-reference/authentication) |
+| **API Overview** | [docs.devin.ai/api-reference/overview](https://docs.devin.ai/api-reference/overview) |
+| **v1 Usage Examples** | [docs.devin.ai/api-reference/v1/usage-examples](https://docs.devin.ai/api-reference/v1/usage-examples) |
+| **v1 Create Session** | [docs.devin.ai/api-reference/v1/sessions/create-a-new-devin-session](https://docs.devin.ai/api-reference/v1/sessions/create-a-new-devin-session) |
+| **Devin App** | [app.devin.ai](https://app.devin.ai) |
+| **Generate API Keys** | [app.devin.ai/settings/api-keys](https://app.devin.ai/settings/api-keys) |
 
 ---
 

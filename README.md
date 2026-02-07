@@ -60,7 +60,27 @@ Use Azure Monitor for quick metric alerts + Elastic for deep log analysis and ML
 
 ## 🚀 Quick Start (15 minutes)
 
-### Step 1: Deploy the Webhook (2 minutes)
+### Step 1: Get Your Devin API Key
+
+You'll need a Devin API key to create sessions. Choose the right key type for your use case:
+
+| Key Type | Prefix | Best For | Docs |
+|----------|--------|----------|------|
+| **Personal API Key** | `apk_user_*` | Testing, personal automation | [Create Key →](https://app.devin.ai/settings/api-keys) |
+| **Service API Key** | `apk_*` | Team automation, CI/CD | [Create Key →](https://app.devin.ai/settings/api-keys) |
+| **Service User (v3)** | `cog_*` | Enterprise with RBAC | [Create Service User →](https://app.devin.ai/settings/enterprise/service-users) |
+
+**To create a Personal or Service API Key:**
+1. Go to [app.devin.ai/settings/api-keys](https://app.devin.ai/settings/api-keys)
+2. Click **"Generate New API Key"**
+3. Copy the key immediately (it's only shown once!)
+
+> 📚 **Full API Documentation:**
+> - [Authentication & API Keys](https://docs.devin.ai/api-reference/authentication) — Key types, security, troubleshooting
+> - [v1 API Usage Examples](https://docs.devin.ai/api-reference/v1/usage-examples) — Creating sessions, monitoring, file uploads
+> - [v1 Create Session](https://docs.devin.ai/api-reference/v1/sessions/create-a-new-devin-session) — Session creation endpoint
+
+### Step 2: Deploy the Webhook (2 minutes)
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/COG-GTM/devin-triage-workflow&env=DEVIN_API_KEY,TARGET_REPO&envDescription=Configure%20your%20Devin%20integration&project-name=devin-triage&repository-name=devin-triage)
 
@@ -72,14 +92,14 @@ npm install
 vercel --prod
 ```
 
-### Step 2: Configure Environment Variables
+### Step 3: Configure Environment Variables
 
 | Variable | Description | Where to Get |
 |----------|-------------|--------------|
 | `DEVIN_API_KEY` | Your Devin API key | [app.devin.ai/settings/api-keys](https://app.devin.ai/settings/api-keys) |
 | `TARGET_REPO` | Repo Devin will analyze | Your GitHub repo URL |
 
-### Step 3: Connect Your Monitoring Platform
+### Step 4: Connect Your Monitoring Platform
 
 **Azure Monitor:**
 1. Create an Action Group with a Webhook action
@@ -96,7 +116,7 @@ vercel --prod
 
 **→ [Full Elastic Guide](./docs/ELASTIC-SETUP.md)**
 
-### Step 4: Test It
+### Step 5: Test It
 
 Trigger a test alert or use the demo UI:
 ```bash
