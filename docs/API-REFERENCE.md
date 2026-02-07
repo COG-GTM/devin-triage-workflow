@@ -381,7 +381,7 @@ $response
 | `WEBHOOK_SECRET` | Secret for webhook authentication | None (no auth) |
 | `JIRA_PROJECT` | JIRA project key for ticket creation | None |
 | `SLACK_CHANNEL` | Slack channel for notifications | None |
-| `DEVIN_PLAYBOOK_ID` | ID of playbook to use | None (default behavior) |
+| `DEVIN_PLAYBOOK_ID` | Playbook name to use | `devin-triage-workflow` |
 
 ### Setting Variables in Vercel
 

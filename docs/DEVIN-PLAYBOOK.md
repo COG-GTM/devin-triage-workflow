@@ -6,6 +6,25 @@ This playbook is the "brain" of the automated triage system. It defines exactly 
 
 ---
 
+## 🎯 Quick Start: Use the Pre-Built Playbook
+
+A ready-to-use playbook has already been created in Devin:
+
+| Field | Value |
+|-------|-------|
+| **Playbook Name** | `devin-triage-workflow` |
+| **Location** | [app.devin.ai/playbooks](https://app.devin.ai/playbooks) |
+
+To use it, set the environment variable in your webhook deployment:
+
+```bash
+DEVIN_PLAYBOOK_ID=devin-triage-workflow
+```
+
+Or skip configuration entirely — this playbook is associated with the Cognition GTM API keys by default.
+
+---
+
 ## Table of Contents
 
 1. [Overview](#overview)
