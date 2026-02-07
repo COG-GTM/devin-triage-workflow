@@ -1,36 +1,64 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Devin Triage Webhook - Reference Implementation
 
-## Getting Started
+This is a reference implementation of the webhook endpoint that receives alerts and creates Devin sessions.
 
-First, run the development server:
+## Structure
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```
+demo-ui/
+├── src/
+│   └── app/
+│       └── api/
+│           └── trigger-devin/
+│               └── route.ts    ← The webhook endpoint
+├── .env.example                ← Environment variables template
+└── package.json
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## The Webhook Endpoint
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The core logic is in `src/app/api/trigger-devin/route.ts`:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Receives alert payload from Azure Monitor or Elastic
+2. Extracts alert details (name, severity, description, logs)
+3. Calls Devin API to create a triage session
+4. Returns the session URL
 
-## Learn More
+## Environment Variables
 
-To learn more about Next.js, take a look at the following resources:
+Copy `.env.example` to `.env.local` and configure:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+DEVIN_API_KEY=your_devin_api_key
+TARGET_REPO=https://github.com/your-org/your-repo
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Local Development
 
-## Deploy on Vercel
+```bash
+npm install
+npm run dev
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The endpoint will be available at `http://localhost:3000/api/trigger-devin`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Deployment
+
+Adapt this code for your preferred platform:
+
+- **Azure Functions** — See [Deployment Guide](../docs/DEPLOYMENT.md#azure-functions-deployment)
+- **AWS Lambda** — See [Deployment Guide](../docs/DEPLOYMENT.md#aws-lambda-deployment)
+- **Google Cloud Run** — See [Deployment Guide](../docs/DEPLOYMENT.md#google-cloud-run)
+
+## Testing
+
+```bash
+curl -X POST http://localhost:3000/api/trigger-devin \
+  -H "Content-Type: application/json" \
+  -d '{
+    "alertName": "test-alert",
+    "severity": 1,
+    "description": "Test alert",
+    "logs": "Error: Test error"
+  }'
+```

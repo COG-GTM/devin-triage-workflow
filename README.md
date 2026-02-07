@@ -106,30 +106,24 @@ You'll need a Devin API key to create sessions. Choose the right key type for yo
 > - [v1 API Usage Examples](https://docs.devin.ai/api-reference/v1/usage-examples) — Creating sessions, monitoring, file uploads
 > - [v1 Create Session](https://docs.devin.ai/api-reference/v1/sessions/create-a-new-devin-session) — Session creation endpoint
 
-### Step 2: Deploy the Webhook (2 minutes)
+### Step 2: Deploy the Webhook Endpoint
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/COG-GTM/devin-triage-workflow&env=DEVIN_API_KEY,TARGET_REPO&envDescription=Configure%20your%20Devin%20integration&project-name=devin-triage&repository-name=devin-triage)
+You need a publicly accessible endpoint that receives alerts and calls the Devin API.
 
-Or manually:
-```bash
-git clone https://github.com/COG-GTM/devin-triage-workflow.git
-cd devin-triage-workflow/demo-ui
-npm install
-vercel --prod
-```
+**Reference implementation:** See [`demo-ui/src/app/api/trigger-devin/route.ts`](./demo-ui/src/app/api/trigger-devin/route.ts)
 
-### Step 3: Configure Environment Variables
+Deploy this endpoint to your preferred platform (Azure Functions, AWS Lambda, Cloud Run, etc.) with these environment variables:
 
 | Variable | Description | Where to Get |
 |----------|-------------|--------------|
 | `DEVIN_API_KEY` | Your Devin API key | [app.devin.ai/settings/api-keys](https://app.devin.ai/settings/api-keys) |
 | `TARGET_REPO` | Repo Devin will analyze | Your GitHub repo URL |
 
-### Step 4: Connect Your Monitoring Platform
+### Step 3: Connect Your Monitoring Platform
 
 **Azure Monitor:**
 1. Create an Action Group with a Webhook action
-2. Point it to `https://your-app.vercel.app/api/trigger-devin`
+2. Point it to your deployed endpoint URL
 3. Enable "Common alert schema"
 4. Create Alert Rules that use your Action Group
 
@@ -137,21 +131,20 @@ vercel --prod
 
 **Elastic:**
 1. Create a Webhook Connector in Kibana
-2. Point it to `https://your-app.vercel.app/api/trigger-devin`
+2. Point it to your deployed endpoint URL
 3. Create Alerting Rules that use your Connector
 
 **→ [Full Elastic Guide](./docs/ELASTIC-SETUP.md)**
 
-### Step 5: Test It
+### Step 4: Test It
 
-Trigger a test alert or use the demo UI:
 ```bash
-cd demo-ui
-npm run dev
-# Open http://localhost:3000
+curl -X POST https://your-endpoint-url/api/trigger-devin \
+  -H "Content-Type: application/json" \
+  -d '{"alertName":"test","severity":1,"description":"Test alert"}'
 ```
 
-Click a demo trigger → Watch Devin work → See the PR created!
+You should receive a response with a Devin session URL.
 
 ---
 
@@ -350,7 +343,7 @@ await redis.set(alertKey, 'processing', 'EX', 300);
 | [Comparison Guide](./docs/COMPARISON.md) | Detailed feature comparison and decision matrix |
 | [Devin Playbook](./docs/DEVIN-PLAYBOOK.md) | The 7-phase triage methodology |
 | [API Reference](./docs/API-REFERENCE.md) | Webhook endpoint documentation |
-| [Deployment Guide](./docs/DEPLOYMENT.md) | Vercel, Azure Functions, AWS Lambda, Docker |
+| [Deployment Guide](./docs/DEPLOYMENT.md) | Platform options: Azure Functions, AWS Lambda, etc. |
 
 ---
 

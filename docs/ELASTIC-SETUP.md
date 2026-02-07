@@ -63,15 +63,20 @@ This guide covers Alerting Rules, Watcher, and ML Anomaly Detection with exact U
 
 ## Step 2: Deploy the Webhook Endpoint
 
-Same as Azure setup — you need a public URL.
+You need a publicly accessible URL that Kibana can call when alerts fire.
 
-### Quick Deploy to Vercel
+### Reference Implementation
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/COG-GTM/devin-triage-workflow&env=DEVIN_API_KEY,TARGET_REPO)
+The webhook endpoint code is in [`demo-ui/src/app/api/trigger-devin/route.ts`](../demo-ui/src/app/api/trigger-devin/route.ts)
 
-Your endpoint: `https://your-app.vercel.app/api/trigger-devin`
+Deploy this to your preferred platform (Azure Functions, AWS Lambda, Cloud Run, or any serverless platform).
 
-See [Deployment Guide](./DEPLOYMENT.md) for other options.
+Your endpoint URL will look like:
+```
+https://your-endpoint.azurewebsites.net/api/trigger-devin
+```
+
+See [Deployment Guide](./DEPLOYMENT.md) for platform-specific instructions.
 
 ---
 
@@ -114,7 +119,7 @@ Fill in the following:
 | Field | Value |
 |-------|-------|
 | **Connector name** | `Devin AI Triage` |
-| **URL** | `https://your-app.vercel.app/api/trigger-devin` |
+| **URL** | `https://your-webhook-endpoint/api/trigger-devin` |
 | **Method** | `POST` |
 
 #### Authentication (if needed)
@@ -387,7 +392,7 @@ Stack Management → Watcher
     "devin_webhook": {
       "webhook": {
         "scheme": "https",
-        "host": "your-app.vercel.app",
+        "host": "your-webhook-endpoint",
         "port": 443,
         "method": "POST",
         "path": "/api/trigger-devin",
@@ -401,7 +406,7 @@ Stack Management → Watcher
 }
 ```
 
-> **Replace** `your-app.vercel.app` with your actual endpoint.
+> **Replace** `your-webhook-endpoint` with your actual endpoint.
 
 5. Click **Create watch**
 

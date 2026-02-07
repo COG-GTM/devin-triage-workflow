@@ -36,8 +36,7 @@ POST /api/trigger-devin
 | Environment | URL |
 |-------------|-----|
 | Local Development | `http://localhost:3000/api/trigger-devin` |
-| Vercel Production | `https://your-app.vercel.app/api/trigger-devin` |
-| Vercel Preview | `https://your-app-git-branch.vercel.app/api/trigger-devin` |
+| Production | `https://your-webhook-endpoint/api/trigger-devin` |
 
 ---
 
@@ -51,12 +50,14 @@ To secure your endpoint, add a webhook secret:
 
 #### 1. Set Environment Variable
 
-```bash
-# Vercel
-vercel env add WEBHOOK_SECRET
+Set `WEBHOOK_SECRET` in your deployment platform:
 
+```bash
 # Local .env.local
 WEBHOOK_SECRET=your-secret-key-here
+
+# Azure Functions: Configuration → Application settings
+# AWS Lambda: Configuration → Environment variables
 ```
 
 #### 2. Update the Route Handler
@@ -283,7 +284,7 @@ Causes:
 ### cURL
 
 ```bash
-curl -X POST https://your-app.vercel.app/api/trigger-devin \
+curl -X POST https://your-webhook-endpoint/api/trigger-devin \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer your-webhook-secret" \
   -d '{
@@ -301,7 +302,7 @@ curl -X POST https://your-app.vercel.app/api/trigger-devin \
 import requests
 
 response = requests.post(
-    "https://your-app.vercel.app/api/trigger-devin",
+    "https://your-webhook-endpoint/api/trigger-devin",
     headers={
         "Content-Type": "application/json",
         "Authorization": "Bearer your-webhook-secret"
@@ -322,7 +323,7 @@ print(response.json())
 ### Node.js
 
 ```javascript
-const response = await fetch("https://your-app.vercel.app/api/trigger-devin", {
+const response = await fetch("https://your-webhook-endpoint/api/trigger-devin", {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
@@ -352,7 +353,7 @@ $body = @{
     logs = "Error: Test error"
 } | ConvertTo-Json
 
-$response = Invoke-RestMethod -Uri "https://your-app.vercel.app/api/trigger-devin" `
+$response = Invoke-RestMethod -Uri "https://your-webhook-endpoint/api/trigger-devin" `
     -Method Post `
     -Headers @{
         "Content-Type" = "application/json"
@@ -383,22 +384,23 @@ $response
 | `SLACK_CHANNEL` | Slack channel for notifications | None |
 | `DEVIN_PLAYBOOK_ID` | Playbook name to use | `devin-triage-workflow` |
 
-### Setting Variables in Vercel
+### Setting Environment Variables
 
-**Via CLI:**
+Configure these in your deployment platform:
+
+**Azure Functions:**
+1. Go to Azure Portal → Function App → **Configuration**
+2. Add each variable under **Application settings**
+
+**AWS Lambda:**
+1. Go to Lambda Console → Your Function → **Configuration**
+2. Add each variable under **Environment variables**
+
+**Google Cloud Run:**
 ```bash
-vercel env add DEVIN_API_KEY
-# Enter value when prompted
-
-vercel env add TARGET_REPO
-# Enter value when prompted
+gcloud run services update SERVICE_NAME \
+  --set-env-vars DEVIN_API_KEY=your-key,TARGET_REPO=your-repo
 ```
-
-**Via Dashboard:**
-1. Go to [vercel.com/dashboard](https://vercel.com/dashboard)
-2. Select your project
-3. Go to **Settings** → **Environment Variables**
-4. Add each variable
 
 ---
 

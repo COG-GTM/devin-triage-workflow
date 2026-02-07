@@ -75,55 +75,32 @@ For detailed information on API key types and authentication, see the official D
 
 You need a publicly accessible URL that Azure can call when alerts fire.
 
-### Option A: Deploy to Vercel (Recommended - 2 minutes)
+### Reference Implementation
 
-#### 2A.1 One-Click Deploy
+The webhook endpoint code is in [`demo-ui/src/app/api/trigger-devin/route.ts`](../demo-ui/src/app/api/trigger-devin/route.ts)
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/COG-GTM/devin-triage-workflow&env=DEVIN_API_KEY,TARGET_REPO&envDescription=Configure%20Devin%20integration&envLink=https://github.com/COG-GTM/devin-triage-workflow%23environment-variables)
+Deploy this to your preferred platform (Azure Functions, AWS Lambda, Cloud Run, or any serverless platform).
 
-#### 2A.2 Configure Environment Variables
-
-When prompted, enter:
+### Required Environment Variables
 
 | Variable | Value | Example |
 |----------|-------|---------|
 | `DEVIN_API_KEY` | Your Devin API key from Step 1 | `apk_user_abc123...` |
 | `TARGET_REPO` | GitHub repo URL Devin will analyze | `https://github.com/your-org/your-app` |
 
-#### 2A.3 Get Your Endpoint URL
+### Your Endpoint URL
 
-After deployment completes, your webhook URL is:
+After deployment, your webhook URL will look like:
 
 ```
-https://your-project-name.vercel.app/api/trigger-devin
+https://your-endpoint.azurewebsites.net/api/trigger-devin
+https://your-function.lambda-url.us-east-1.on.aws/
+https://your-service-abc123.run.app/api/trigger-devin
 ```
 
 Copy this URL — you'll need it in Step 3.
 
-### Option B: Manual Vercel Deploy
-
-```bash
-# Clone the repository
-git clone https://github.com/COG-GTM/devin-triage-workflow.git
-cd devin-triage-workflow/demo-ui
-
-# Install Vercel CLI
-npm install -g vercel
-
-# Deploy
-vercel --prod
-
-# Set environment variables
-vercel env add DEVIN_API_KEY
-vercel env add TARGET_REPO
-
-# Redeploy with variables
-vercel --prod
-```
-
-### Option C: Deploy to Azure Functions
-
-See [Azure Functions Deployment](./DEPLOYMENT.md#azure-functions) for detailed instructions.
+For platform-specific deployment instructions, see the [Deployment Guide](./DEPLOYMENT.md).
 
 ---
 
@@ -196,7 +173,7 @@ This is where you add the Devin webhook:
 |-------|-------|
 | **Name** | `Devin-AI-Webhook` |
 | **URI** | Your webhook URL from Step 2 |
-| | e.g., `https://your-app.vercel.app/api/trigger-devin` |
+| | e.g., `https://your-webhook-endpoint/api/trigger-devin` |
 | **Enable common alert schema** | ✅ **Yes** (Required!) |
 
 > ⚠️ **Critical:** You MUST enable "Common alert schema" for the integration to work correctly.
@@ -391,7 +368,7 @@ This ensures only critical alerts trigger Devin.
 ### 6.1 Test the Webhook Directly
 
 ```bash
-curl -X POST https://your-app.vercel.app/api/trigger-devin \
+curl -X POST https://your-webhook-endpoint/api/trigger-devin \
   -H "Content-Type: application/json" \
   -d '{
     "schemaId": "azureMonitorCommonAlertSchema",
@@ -455,7 +432,7 @@ Expected response:
 | Symptom | Cause | Solution |
 |---------|-------|----------|
 | No webhook in activity log | Alert not firing | Check alert rule conditions, lower thresholds for testing |
-| Webhook shows in log but fails | Network/firewall issue | Ensure Vercel/endpoint is publicly accessible |
+| Webhook shows in log but fails | Network/firewall issue | Ensure endpoint is publicly accessible |
 | 404 error | Wrong URL | Verify the `/api/trigger-devin` path is correct |
 
 ### Webhook Returns Error
@@ -464,15 +441,14 @@ Expected response:
 |-------|-------|----------|
 | 401 Unauthorized | Invalid Devin API key | Check `DEVIN_API_KEY` environment variable |
 | 400 Bad Request | Missing fields | Ensure "Common alert schema" is enabled |
-| 500 Server Error | Endpoint code error | Check Vercel function logs |
+| 500 Server Error | Endpoint code error | Check your serverless function logs |
 
-### View Vercel Logs
+### View Function Logs
 
-```bash
-vercel logs your-project-name --follow
-```
-
-Or go to: [https://vercel.com/dashboard](https://vercel.com/dashboard) → Your Project → **Deployments** → **Functions** → **Logs**
+Check logs in your deployment platform:
+- **Azure Functions:** Azure Portal → Function App → Monitor → Logs
+- **AWS Lambda:** CloudWatch Logs
+- **Cloud Run:** Cloud Console → Logs
 
 ### Devin Session Not Created
 
