@@ -205,8 +205,7 @@ always returns a value. Missing null check before accessing .url property.` },
         { time: fmt(118000), action: "Alert rule evaluated", status: "Condition met" },
         { time: fmt(117000), action: "Action group triggered: ag-infra-warnings", status: "Success" },
         { time: fmt(116000), action: "Slack notification sent", status: "Delivered" },
-        { time: fmt(115000), action: "Webhook called: Devin-AI-Webhook", status: "Success (201)" },
-        { time: fmt(114500), action: "Devin session created", status: "session_1707252412346" },
+        { time: fmt(115000), action: "Auto-scaling evaluation triggered", status: "Pending" },
       ],
     },
     slowquery: {
@@ -239,9 +238,8 @@ always returns a value. Missing null check before accessing .url property.` },
       actionsTaken: [
         { time: fmt(58000), action: "Alert rule evaluated", status: "Condition met" },
         { time: fmt(57000), action: "Action group triggered: ag-elastic-warnings", status: "Success" },
-        { time: fmt(56000), action: "Webhook called: Devin-AI-Webhook", status: "Success (201)" },
-        { time: fmt(55500), action: "Devin session created", status: "session_1707252412347" },
-        { time: fmt(55000), action: "Query optimization recommendation generated", status: "Complete" },
+        { time: fmt(56000), action: "Email notification sent", status: "Delivered" },
+        { time: fmt(55000), action: "Query optimization runbook linked", status: "Complete" },
       ],
     },
     certexpiry: {
@@ -272,8 +270,7 @@ always returns a value. Missing null check before accessing .url property.` },
       actionsTaken: [
         { time: fmt(298000), action: "Alert rule evaluated", status: "Condition met" },
         { time: fmt(297000), action: "Action group triggered: ag-security-warnings", status: "Success" },
-        { time: fmt(296000), action: "Webhook called: Devin-AI-Webhook", status: "Success (201)" },
-        { time: fmt(295500), action: "Devin session created", status: "session_1707252412348" },
+        { time: fmt(296000), action: "Email notification sent to security team", status: "Delivered" },
         { time: fmt(295000), action: "ServiceNow ticket created", status: "INC0012345" },
       ],
     },
@@ -311,9 +308,8 @@ always returns a value. Missing null check before accessing .url property.` },
       actionsTaken: [
         { time: fmt(28000), action: "Alert rule evaluated", status: "Condition met" },
         { time: fmt(27000), action: "Action group triggered: ag-deployments", status: "Success" },
-        { time: fmt(26000), action: "Webhook called: Devin-AI-Webhook", status: "Success (201)" },
-        { time: fmt(25500), action: "Devin session created", status: "session_1707252412349" },
-        { time: fmt(25000), action: "Slack notification sent to #releases", status: "Delivered" },
+        { time: fmt(26000), action: "Slack notification sent to #releases", status: "Delivered" },
+        { time: fmt(25000), action: "Release notes posted to Confluence", status: "Complete" },
       ],
     },
     shardrebalance: {
@@ -346,9 +342,7 @@ always returns a value. Missing null check before accessing .url property.` },
       actionsTaken: [
         { time: fmt(118000), action: "Alert rule evaluated", status: "Condition met" },
         { time: fmt(117000), action: "Action group triggered: ag-elastic-info", status: "Success" },
-        { time: fmt(116000), action: "Webhook called: Devin-AI-Webhook", status: "Success (201)" },
-        { time: fmt(115500), action: "Devin session created", status: "session_1707252412350" },
-        { time: fmt(115000), action: "Dashboard updated", status: "Complete" },
+        { time: fmt(116000), action: "Dashboard status updated", status: "Complete" },
       ],
     },
     ratelimit: {
@@ -380,9 +374,8 @@ always returns a value. Missing null check before accessing .url property.` },
       actionsTaken: [
         { time: fmt(298000), action: "Alert rule evaluated", status: "Condition met" },
         { time: fmt(297000), action: "Action group triggered: ag-api-info", status: "Success" },
-        { time: fmt(296000), action: "Webhook called: Devin-AI-Webhook", status: "Success (201)" },
-        { time: fmt(295500), action: "Devin session created", status: "session_1707252412351" },
-        { time: fmt(295000), action: "Usage report generated", status: "Complete" },
+        { time: fmt(296000), action: "Usage report generated", status: "Complete" },
+        { time: fmt(295000), action: "Customer success team notified", status: "Email sent" },
       ],
     },
   };
@@ -872,12 +865,17 @@ function AzureMonitorDemo({ onDevinNotification, devinSessions }: { onDevinNotif
     setNav("alerts");
 
     await new Promise(r => setTimeout(r, 1500));
-    const sessionId = `session_${Date.now()}`;
-    const sessionUrl = `https://app.devin.ai/sessions/${sessionId}`;
     
-    onDevinNotification({ id: crypto.randomUUID(), sessionId, url: sessionUrl, alertName: alert.name, status: "creating", timestamp: new Date().toISOString() });
-    setTimeout(() => onDevinNotification({ id: crypto.randomUUID(), sessionId, url: sessionUrl, alertName: alert.name, status: "analyzing", timestamp: new Date().toISOString() }), 3000);
-    setTimeout(() => onDevinNotification({ id: crypto.randomUUID(), sessionId, url: sessionUrl, alertName: alert.name, status: "complete", timestamp: new Date().toISOString() }), 8000);
+    // Only auto-trigger Devin for Sev 1 (P0/P1) alerts
+    // P2/P3 alerts just fire and notify - no auto-escalation
+    if (alert.severity === 1) {
+      const sessionId = `session_${Date.now()}`;
+      const sessionUrl = `https://app.devin.ai/sessions/${sessionId}`;
+      
+      onDevinNotification({ id: crypto.randomUUID(), sessionId, url: sessionUrl, alertName: alert.name, status: "creating", timestamp: new Date().toISOString() });
+      setTimeout(() => onDevinNotification({ id: crypto.randomUUID(), sessionId, url: sessionUrl, alertName: alert.name, status: "analyzing", timestamp: new Date().toISOString() }), 3000);
+      setTimeout(() => onDevinNotification({ id: crypto.randomUUID(), sessionId, url: sessionUrl, alertName: alert.name, status: "complete", timestamp: new Date().toISOString() }), 8000);
+    }
     setIsTriggering(false);
   };
 
@@ -1375,10 +1373,15 @@ function ElasticDemo({ onDevinNotification, devinSessions }: { onDevinNotificati
     setNav("observability");
 
     await new Promise(r => setTimeout(r, 1500));
-    const sessionId = `session_${Date.now()}`;
-    onDevinNotification({ id: crypto.randomUUID(), sessionId, url: `https://app.devin.ai/sessions/${sessionId}`, alertName: alert.name, status: "creating", timestamp: new Date().toISOString() });
-    setTimeout(() => onDevinNotification({ id: crypto.randomUUID(), sessionId, url: `https://app.devin.ai/sessions/${sessionId}`, alertName: alert.name, status: "analyzing", timestamp: new Date().toISOString() }), 3000);
-    setTimeout(() => onDevinNotification({ id: crypto.randomUUID(), sessionId, url: `https://app.devin.ai/sessions/${sessionId}`, alertName: alert.name, status: "complete", timestamp: new Date().toISOString() }), 8000);
+    
+    // Only auto-trigger Devin for Sev 1 (P0/P1) alerts
+    // P2/P3 alerts just fire and notify - no auto-escalation
+    if (alert.severity === 1) {
+      const sessionId = `session_${Date.now()}`;
+      onDevinNotification({ id: crypto.randomUUID(), sessionId, url: `https://app.devin.ai/sessions/${sessionId}`, alertName: alert.name, status: "creating", timestamp: new Date().toISOString() });
+      setTimeout(() => onDevinNotification({ id: crypto.randomUUID(), sessionId, url: `https://app.devin.ai/sessions/${sessionId}`, alertName: alert.name, status: "analyzing", timestamp: new Date().toISOString() }), 3000);
+      setTimeout(() => onDevinNotification({ id: crypto.randomUUID(), sessionId, url: `https://app.devin.ai/sessions/${sessionId}`, alertName: alert.name, status: "complete", timestamp: new Date().toISOString() }), 8000);
+    }
     setIsTriggering(false);
   };
 
