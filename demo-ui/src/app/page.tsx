@@ -44,7 +44,7 @@ interface DevinNotification {
 // ============================================================================
 // ALERT DATA GENERATORS
 // ============================================================================
-function generateAlertData(type: "auth" | "timeout" | "nullref"): Omit<Alert, "id" | "firedTime"> {
+function generateAlertData(type: "auth" | "timeout" | "nullref" | "memory" | "slowquery" | "certexpiry" | "deployment" | "shardrebalance" | "ratelimit"): Omit<Alert, "id" | "firedTime"> {
   const now = new Date();
   const fmt = (ms: number) => new Date(now.getTime() - ms).toISOString();
   
@@ -169,6 +169,213 @@ always returns a value. Missing null check before accessing .url property.` },
         { time: fmt(115500), action: "Action group triggered: ag-devin-triage", status: "Success" },
         { time: fmt(115000), action: "Webhook called: Devin-AI-Webhook", status: "Success (201)" },
         { time: fmt(114500), action: "Devin session created", status: "session_1707252412345" },
+      ],
+    },
+    // ========================================================================
+    // P2 (Sev 2) ALERTS - WARNING
+    // ========================================================================
+    memory: {
+      name: "container-memory-pressure",
+      severity: 2,
+      status: "Fired",
+      affectedResource: "aks-mcp-server-prod",
+      resourceType: "Microsoft.ContainerService/managedClusters",
+      signalType: "Metric",
+      description: "Container memory usage is approaching the configured limit. Performance degradation may occur if memory pressure continues.",
+      condition: "avg(container_memory_working_set_bytes) / container_spec_memory_limit_bytes > 0.85",
+      threshold: "Memory utilization > 85% for 10 minutes",
+      actualValue: "Memory utilization: 91.2% (1.82 GB / 2 GB)",
+      dimensions: [
+        { key: "Subscription", value: "Enterprise Production" },
+        { key: "Resource Group", value: "rg-mcp-servers-prod" },
+        { key: "Cluster", value: "aks-mcp-server-prod" },
+        { key: "Namespace", value: "mcp-system" },
+        { key: "Pod", value: "mcp-server-7d4f8b9c6-x2j4k" },
+        { key: "Container", value: "mcp-server" },
+      ],
+      logs: [
+        { timestamp: fmt(900000), level: "INFO", service: "mcp-server", message: "Processing large batch request", details: "workItems=2500, estimatedMemory=450MB" },
+        { timestamp: fmt(720000), level: "INFO", service: "cache", message: "Cache size growing", details: "entries=45000, memoryUsed=890MB" },
+        { timestamp: fmt(600000), level: "WARN", service: "runtime", message: "Heap memory usage elevated", details: "heapUsed=1.65GB, heapTotal=1.95GB, rss=2.1GB" },
+        { timestamp: fmt(480000), level: "WARN", service: "runtime", message: "Garbage collection taking longer", details: "gcPauseMs=245, gcType=major" },
+        { timestamp: fmt(300000), level: "WARN", service: "k8s", message: "Container memory nearing limit", details: "usage=1.78GB, limit=2GB, utilization=89%" },
+        { timestamp: fmt(120000), level: "WARN", service: "k8s", message: "Memory pressure detected", details: "usage=1.82GB, limit=2GB, utilization=91.2%" },
+      ],
+      actionsTaken: [
+        { time: fmt(118000), action: "Alert rule evaluated", status: "Condition met" },
+        { time: fmt(117000), action: "Action group triggered: ag-infra-warnings", status: "Success" },
+        { time: fmt(116000), action: "Slack notification sent", status: "Delivered" },
+        { time: fmt(115000), action: "Auto-scaling evaluation triggered", status: "Pending" },
+      ],
+    },
+    slowquery: {
+      name: "elasticsearch-slow-queries",
+      severity: 2,
+      status: "Fired",
+      affectedResource: "es-logs-prod-cluster",
+      resourceType: "Microsoft.Elastic/monitors",
+      signalType: "Log",
+      description: "Elasticsearch query latency has exceeded acceptable thresholds. Multiple queries are taking longer than 5 seconds to complete.",
+      condition: "search.query_time_in_millis > 5000",
+      threshold: "P95 query latency > 5000ms for 15 minutes",
+      actualValue: "P95 latency: 8,450ms (17 slow queries in last 15 min)",
+      dimensions: [
+        { key: "Subscription", value: "Enterprise Production" },
+        { key: "Resource Group", value: "rg-elastic-prod" },
+        { key: "Cluster", value: "es-logs-prod-cluster" },
+        { key: "Index Pattern", value: "logs-mcp-*" },
+        { key: "Node Count", value: "3" },
+        { key: "Shard Count", value: "15" },
+      ],
+      logs: [
+        { timestamp: fmt(600000), level: "INFO", service: "elasticsearch", message: "Query executed", details: "index=logs-mcp-2024.02, took=1250ms, hits=45000" },
+        { timestamp: fmt(480000), level: "WARN", service: "elasticsearch", message: "Slow query detected", details: "index=logs-mcp-2024.02, took=5890ms, query=wildcard on message field" },
+        { timestamp: fmt(360000), level: "WARN", service: "elasticsearch", message: "High heap pressure on data node", details: "node=es-data-0, heapUsedPercent=82%" },
+        { timestamp: fmt(240000), level: "WARN", service: "elasticsearch", message: "Slow query detected", details: "index=logs-mcp-*, took=7230ms, query=aggregation with high cardinality" },
+        { timestamp: fmt(120000), level: "WARN", service: "elasticsearch", message: "Query queue building up", details: "searchQueueSize=45, searchActiveThreads=12" },
+        { timestamp: fmt(60000), level: "WARN", service: "elasticsearch", message: "Slow query threshold exceeded", details: "index=logs-mcp-2024.02, took=8450ms, query=nested aggregation" },
+      ],
+      actionsTaken: [
+        { time: fmt(58000), action: "Alert rule evaluated", status: "Condition met" },
+        { time: fmt(57000), action: "Action group triggered: ag-elastic-warnings", status: "Success" },
+        { time: fmt(56000), action: "Email notification sent", status: "Delivered" },
+        { time: fmt(55000), action: "Query optimization recommendation generated", status: "Complete" },
+      ],
+    },
+    certexpiry: {
+      name: "tls-certificate-expiring",
+      severity: 2,
+      status: "Fired",
+      affectedResource: "kv-mcp-prod",
+      resourceType: "Microsoft.KeyVault/vaults",
+      signalType: "Metric",
+      description: "TLS certificate for the MCP server API endpoint will expire in 14 days. Renewal required to prevent service disruption.",
+      condition: "CertificateExpirationDays < 30",
+      threshold: "Certificate expires within 30 days",
+      actualValue: "Certificate expires in 14 days (2024-02-24)",
+      dimensions: [
+        { key: "Subscription", value: "Enterprise Production" },
+        { key: "Resource Group", value: "rg-mcp-servers-prod" },
+        { key: "Key Vault", value: "kv-mcp-prod" },
+        { key: "Certificate Name", value: "mcp-api-cert" },
+        { key: "Subject", value: "CN=api.mcp.company.com" },
+        { key: "Issuer", value: "DigiCert TLS RSA SHA256 2020 CA1" },
+      ],
+      logs: [
+        { timestamp: fmt(86400000), level: "INFO", service: "keyvault", message: "Certificate rotation check", details: "cert=mcp-api-cert, expiresIn=30d" },
+        { timestamp: fmt(43200000), level: "INFO", service: "keyvault", message: "Certificate rotation check", details: "cert=mcp-api-cert, expiresIn=21d" },
+        { timestamp: fmt(600000), level: "WARN", service: "keyvault", message: "Certificate expiration warning", details: "cert=mcp-api-cert, expiresIn=14d, autoRenew=false" },
+        { timestamp: fmt(300000), level: "WARN", service: "keyvault", message: "Certificate renewal required", details: "cert=mcp-api-cert, expirationDate=2024-02-24T00:00:00Z" },
+      ],
+      actionsTaken: [
+        { time: fmt(298000), action: "Alert rule evaluated", status: "Condition met" },
+        { time: fmt(297000), action: "Action group triggered: ag-security-warnings", status: "Success" },
+        { time: fmt(296000), action: "Email notification sent to security team", status: "Delivered" },
+        { time: fmt(295000), action: "ServiceNow ticket created", status: "INC0012345" },
+      ],
+    },
+    // ========================================================================
+    // P3 (Sev 3) ALERTS - INFORMATIONAL
+    // ========================================================================
+    deployment: {
+      name: "deployment-completed",
+      severity: 3,
+      status: "Fired",
+      affectedResource: "aks-mcp-server-prod",
+      resourceType: "Microsoft.ContainerService/managedClusters",
+      signalType: "Log",
+      description: "New version of MCP Server has been successfully deployed to production. All health checks passed.",
+      condition: "ContainerLog | where LogEntry contains 'Deployment rollout complete'",
+      threshold: "Deployment event detected",
+      actualValue: "Deployment mcp-server-v1.2.3 completed successfully",
+      dimensions: [
+        { key: "Subscription", value: "Enterprise Production" },
+        { key: "Resource Group", value: "rg-mcp-servers-prod" },
+        { key: "Cluster", value: "aks-mcp-server-prod" },
+        { key: "Namespace", value: "mcp-system" },
+        { key: "Deployment", value: "mcp-server" },
+        { key: "New Version", value: "v1.2.3" },
+        { key: "Previous Version", value: "v1.2.2" },
+      ],
+      logs: [
+        { timestamp: fmt(180000), level: "INFO", service: "k8s", message: "Deployment update initiated", details: "deployment=mcp-server, image=mcr.microsoft.com/mcp-server:v1.2.3" },
+        { timestamp: fmt(150000), level: "INFO", service: "k8s", message: "Rolling update in progress", details: "replicas=3, updated=1, available=3" },
+        { timestamp: fmt(120000), level: "INFO", service: "k8s", message: "Rolling update in progress", details: "replicas=3, updated=2, available=3" },
+        { timestamp: fmt(90000), level: "INFO", service: "k8s", message: "All replicas updated", details: "replicas=3, updated=3, available=3" },
+        { timestamp: fmt(60000), level: "INFO", service: "mcp-server", message: "Health check passed", details: "endpoint=/health, status=200, latency=12ms" },
+        { timestamp: fmt(30000), level: "INFO", service: "k8s", message: "Deployment rollout complete", details: "deployment=mcp-server, version=v1.2.3, duration=150s" },
+      ],
+      actionsTaken: [
+        { time: fmt(28000), action: "Alert rule evaluated", status: "Condition met" },
+        { time: fmt(27000), action: "Action group triggered: ag-deployments", status: "Success" },
+        { time: fmt(26000), action: "Slack notification sent to #releases", status: "Delivered" },
+        { time: fmt(25000), action: "Release notes posted", status: "Complete" },
+      ],
+    },
+    shardrebalance: {
+      name: "elasticsearch-shard-rebalancing",
+      severity: 3,
+      status: "Fired",
+      affectedResource: "es-logs-prod-cluster",
+      resourceType: "Microsoft.Elastic/monitors",
+      signalType: "Log",
+      description: "Elasticsearch cluster is rebalancing shards after node recovery. This is normal maintenance activity but may cause temporary performance impact.",
+      condition: "ClusterHealth | where ShardRelocatingCount > 0",
+      threshold: "Shard relocation detected",
+      actualValue: "8 shards relocating across 3 nodes",
+      dimensions: [
+        { key: "Subscription", value: "Enterprise Production" },
+        { key: "Resource Group", value: "rg-elastic-prod" },
+        { key: "Cluster", value: "es-logs-prod-cluster" },
+        { key: "Cluster Status", value: "yellow" },
+        { key: "Total Shards", value: "45" },
+        { key: "Relocating Shards", value: "8" },
+      ],
+      logs: [
+        { timestamp: fmt(600000), level: "INFO", service: "elasticsearch", message: "Node rejoined cluster", details: "node=es-data-2, reason=restart after maintenance" },
+        { timestamp: fmt(540000), level: "INFO", service: "elasticsearch", message: "Cluster state changed", details: "status=yellow, reason=unassigned shards detected" },
+        { timestamp: fmt(480000), level: "INFO", service: "elasticsearch", message: "Shard allocation started", details: "relocating=8, initializing=0" },
+        { timestamp: fmt(360000), level: "INFO", service: "elasticsearch", message: "Shard relocation progress", details: "relocated=3, remaining=5, bytesRecovered=12.5GB" },
+        { timestamp: fmt(240000), level: "INFO", service: "elasticsearch", message: "Shard relocation progress", details: "relocated=6, remaining=2, bytesRecovered=28.3GB" },
+        { timestamp: fmt(120000), level: "INFO", service: "elasticsearch", message: "Shard rebalancing in progress", details: "relocated=7, remaining=1, estimatedCompletion=5min" },
+      ],
+      actionsTaken: [
+        { time: fmt(118000), action: "Alert rule evaluated", status: "Condition met" },
+        { time: fmt(117000), action: "Action group triggered: ag-elastic-info", status: "Success" },
+        { time: fmt(116000), action: "Dashboard updated", status: "Complete" },
+      ],
+    },
+    ratelimit: {
+      name: "api-rate-limit-warning",
+      severity: 3,
+      status: "Fired",
+      affectedResource: "apim-mcp-prod",
+      resourceType: "Microsoft.ApiManagement/service",
+      signalType: "Metric",
+      description: "API rate limit utilization is elevated. A specific client is consuming 75% of their allocated quota. Consider reaching out for capacity planning.",
+      condition: "RateLimitUtilization > 70",
+      threshold: "Rate limit utilization > 70%",
+      actualValue: "Client 'corp-automation-svc' at 75% of 10,000 req/hour quota",
+      dimensions: [
+        { key: "Subscription", value: "Enterprise Production" },
+        { key: "Resource Group", value: "rg-mcp-servers-prod" },
+        { key: "API Management", value: "apim-mcp-prod" },
+        { key: "API", value: "MCP Server API" },
+        { key: "Client ID", value: "corp-automation-svc" },
+        { key: "Subscription Tier", value: "Standard" },
+      ],
+      logs: [
+        { timestamp: fmt(3600000), level: "INFO", service: "apim", message: "Hourly rate limit reset", details: "client=corp-automation-svc, quota=10000, used=0" },
+        { timestamp: fmt(2400000), level: "INFO", service: "apim", message: "Rate limit checkpoint", details: "client=corp-automation-svc, used=3500, remaining=6500, utilization=35%" },
+        { timestamp: fmt(1200000), level: "INFO", service: "apim", message: "Rate limit checkpoint", details: "client=corp-automation-svc, used=5800, remaining=4200, utilization=58%" },
+        { timestamp: fmt(600000), level: "WARN", service: "apim", message: "Rate limit utilization elevated", details: "client=corp-automation-svc, used=7500, remaining=2500, utilization=75%" },
+        { timestamp: fmt(300000), level: "INFO", service: "apim", message: "Client request pattern", details: "client=corp-automation-svc, endpoint=/builds, avgRequestsPerMin=125" },
+      ],
+      actionsTaken: [
+        { time: fmt(298000), action: "Alert rule evaluated", status: "Condition met" },
+        { time: fmt(297000), action: "Action group triggered: ag-api-info", status: "Success" },
+        { time: fmt(296000), action: "Usage report generated", status: "Complete" },
+        { time: fmt(295000), action: "Customer success notified", status: "Email sent" },
       ],
     },
   };
@@ -646,7 +853,7 @@ function AzureMonitorDemo({ onDevinNotification, devinSessions }: { onDevinNotif
     scheduleType: "always",
   });
 
-  const triggerAlert = async (type: "auth" | "timeout" | "nullref") => {
+  const triggerAlert = async (type: "auth" | "timeout" | "nullref" | "memory" | "slowquery" | "certexpiry" | "deployment" | "shardrebalance" | "ratelimit") => {
     setIsTriggering(true);
     const alertData = generateAlertData(type);
     const alert: Alert = {
@@ -744,18 +951,58 @@ function AzureMonitorDemo({ onDevinNotification, devinSessions }: { onDevinNotif
 
           {/* Demo Triggers */}
           <div className="azure-nav-section mt-6">🧪 Demo Triggers</div>
-          <div className="px-3 space-y-1">
-            {[
-              { type: "auth" as const, label: "Token Expiration", severity: 1 },
-              { type: "timeout" as const, label: "API Timeout", severity: 1 },
-              { type: "nullref" as const, label: "Null Reference", severity: 1 },
-            ].map(a => (
-              <button key={a.type} disabled={isTriggering} onClick={() => triggerAlert(a.type)} className="w-full text-left px-3 py-2 text-xs bg-white border border-[#edebe9] rounded hover:border-[#0078d4] disabled:opacity-50 flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full bg-[#d83b01]`}/>
-                <span className="flex-1">{a.label}</span>
-                <SeverityBadgeShort severity={a.severity} />
-              </button>
-            ))}
+          <div className="px-3 space-y-3">
+            {/* P1 - Critical/Error */}
+            <div>
+              <div className="text-[10px] font-semibold text-[#605e5c] uppercase tracking-wide mb-1">Sev 1 - Error</div>
+              <div className="space-y-1">
+                {[
+                  { type: "auth" as const, label: "Token Expiration", severity: 1 },
+                  { type: "timeout" as const, label: "API Timeout", severity: 1 },
+                  { type: "nullref" as const, label: "Null Reference", severity: 1 },
+                ].map(a => (
+                  <button key={a.type} disabled={isTriggering} onClick={() => triggerAlert(a.type)} className="w-full text-left px-3 py-2 text-xs bg-white border border-[#edebe9] rounded hover:border-[#0078d4] disabled:opacity-50 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#d83b01]"/>
+                    <span className="flex-1">{a.label}</span>
+                    <SeverityBadgeShort severity={a.severity} />
+                  </button>
+                ))}
+              </div>
+            </div>
+            {/* P2 - Warning */}
+            <div>
+              <div className="text-[10px] font-semibold text-[#605e5c] uppercase tracking-wide mb-1">Sev 2 - Warning</div>
+              <div className="space-y-1">
+                {[
+                  { type: "memory" as const, label: "Memory Pressure", severity: 2 },
+                  { type: "slowquery" as const, label: "Slow ES Queries", severity: 2 },
+                  { type: "certexpiry" as const, label: "Cert Expiring", severity: 2 },
+                ].map(a => (
+                  <button key={a.type} disabled={isTriggering} onClick={() => triggerAlert(a.type)} className="w-full text-left px-3 py-2 text-xs bg-white border border-[#edebe9] rounded hover:border-[#0078d4] disabled:opacity-50 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#ffaa44]"/>
+                    <span className="flex-1">{a.label}</span>
+                    <SeverityBadgeShort severity={a.severity} />
+                  </button>
+                ))}
+              </div>
+            </div>
+            {/* P3 - Informational */}
+            <div>
+              <div className="text-[10px] font-semibold text-[#605e5c] uppercase tracking-wide mb-1">Sev 3 - Informational</div>
+              <div className="space-y-1">
+                {[
+                  { type: "deployment" as const, label: "Deployment Complete", severity: 3 },
+                  { type: "shardrebalance" as const, label: "ES Shard Rebalance", severity: 3 },
+                  { type: "ratelimit" as const, label: "Rate Limit Warning", severity: 3 },
+                ].map(a => (
+                  <button key={a.type} disabled={isTriggering} onClick={() => triggerAlert(a.type)} className="w-full text-left px-3 py-2 text-xs bg-white border border-[#edebe9] rounded hover:border-[#0078d4] disabled:opacity-50 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#0078d4]"/>
+                    <span className="flex-1">{a.label}</span>
+                    <SeverityBadgeShort severity={a.severity} />
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </nav>
 
@@ -1113,7 +1360,7 @@ function ElasticDemo({ onDevinNotification, devinSessions }: { onDevinNotificati
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
   const [isTriggering, setIsTriggering] = useState(false);
 
-  const triggerAlert = async (type: "auth" | "timeout" | "nullref") => {
+  const triggerAlert = async (type: "auth" | "timeout" | "nullref" | "memory" | "slowquery" | "certexpiry" | "deployment" | "shardrebalance" | "ratelimit") => {
     setIsTriggering(true);
     const alertData = generateAlertData(type);
     const alert: Alert = { ...alertData, id: crypto.randomUUID(), firedTime: new Date().toISOString() };
