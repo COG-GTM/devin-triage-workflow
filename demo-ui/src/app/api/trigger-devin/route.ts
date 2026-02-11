@@ -4,8 +4,94 @@ const DEVIN_API_KEY = process.env.DEVIN_API_KEY;
 const TARGET_REPO = process.env.TARGET_REPO || "https://github.com/COG-GTM/azure-devops-mcp";
 const JIRA_PROJECT = process.env.JIRA_PROJECT || "PLATFORM";
 const SLACK_CHANNEL = process.env.SLACK_CHANNEL || "#alerts";
+const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL;
 
 const V1_BASE_URL = "https://api.devin.ai/v1";
+
+// Post to Slack when Devin session is triggered
+async function notifySlack(alertName: string, severity: number, sessionUrl: string, affectedResource: string) {
+  if (!SLACK_WEBHOOK_URL) {
+    console.log("SLACK_WEBHOOK_URL not configured, skipping Slack notification");
+    return;
+  }
+
+  const severityEmoji = severity === 0 ? "🔴" : severity === 1 ? "🟠" : severity === 2 ? "🟡" : "🔵";
+  const severityLabel = severity === 0 ? "Critical" : severity === 1 ? "Error" : severity === 2 ? "Warning" : "Info";
+
+  const payload = {
+    blocks: [
+      {
+        type: "header",
+        text: {
+          type: "plain_text",
+          text: "🤖 Devin Alert Triage Triggered",
+          emoji: true
+        }
+      },
+      {
+        type: "section",
+        fields: [
+          {
+            type: "mrkdwn",
+            text: `*Alert:*\n${alertName}`
+          },
+          {
+            type: "mrkdwn",
+            text: `*Severity:*\n${severityEmoji} Sev ${severity} (${severityLabel})`
+          },
+          {
+            type: "mrkdwn",
+            text: `*Resource:*\n${affectedResource}`
+          },
+          {
+            type: "mrkdwn",
+            text: `*Status:*\n⚡ Devin analyzing...`
+          }
+        ]
+      },
+      {
+        type: "actions",
+        elements: [
+          {
+            type: "button",
+            text: {
+              type: "plain_text",
+              text: "View Devin Session",
+              emoji: true
+            },
+            url: sessionUrl,
+            style: "primary"
+          }
+        ]
+      },
+      {
+        type: "context",
+        elements: [
+          {
+            type: "mrkdwn",
+            text: `Triggered at ${new Date().toISOString()} • Auto-triage in progress`
+          }
+        ]
+      }
+    ]
+  };
+
+  try {
+    const response = await fetch(SLACK_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    
+    if (!response.ok) {
+      console.error("Slack webhook failed:", response.status);
+    } else {
+      console.log("Slack notification sent successfully");
+    }
+  } catch (error) {
+    console.error("Slack webhook error:", error);
+  }
+}
 
 export async function POST(request: Request) {
   try {
@@ -170,10 +256,15 @@ BEGIN TRIAGE NOW. Work methodically through each phase.`;
 
     console.log("Session created:", data.session_id);
 
+    const sessionUrl = data.url || `https://app.devin.ai/sessions/${data.session_id}`;
+    
+    // Notify Slack that Devin is on the case
+    await notifySlack(alertName, severity, sessionUrl, affectedResource);
+
     return NextResponse.json({
       success: true,
       session_id: data.session_id,
-      url: data.url || `https://app.devin.ai/sessions/${data.session_id}`,
+      url: sessionUrl,
     });
 
   } catch (error) {
