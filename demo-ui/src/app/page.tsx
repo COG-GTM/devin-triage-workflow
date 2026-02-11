@@ -88,6 +88,10 @@ function generateAlertData(type: "auth" | "timeout" | "nullref" | "memory" | "sl
         { time: fmt(26000), action: "Email notification sent", status: "Delivered" },
         { time: fmt(25000), action: "Webhook called: Devin-AI-Webhook", status: "Success (201)" },
         { time: fmt(24000), action: "Devin session created", status: "session_1707252345678" },
+        { time: fmt(18000), action: "Root cause identified", status: "Missing token refresh retry logic" },
+        { time: fmt(12000), action: "PR #892 created with fix", status: "github.com/COG-GTM/azure-devops-mcp/pull/892" },
+        { time: fmt(8000), action: "Similar incidents found", status: "INC-1847, INC-1623 (94% match)" },
+        { time: fmt(5000), action: "📋 Post-mortem generated", status: "View at /incidents" },
       ],
     },
     timeout: {
@@ -127,6 +131,10 @@ function generateAlertData(type: "auth" | "timeout" | "nullref" | "memory" | "sl
         { time: fmt(287000), action: "Action group triggered: ag-devin-triage", status: "Success" },
         { time: fmt(286000), action: "Webhook called: Devin-AI-Webhook", status: "Success (201)" },
         { time: fmt(285000), action: "Devin session created", status: "session_1707252398765" },
+        { time: fmt(278000), action: "Root cause identified", status: "N+1 query pattern in /builds endpoint" },
+        { time: fmt(270000), action: "PR #856 created with fix", status: "Batch query optimization" },
+        { time: fmt(265000), action: "Similar incidents found", status: "INC-1792 (87% match)" },
+        { time: fmt(260000), action: "📋 Post-mortem generated", status: "View at /incidents" },
       ],
     },
     nullref: {
@@ -169,6 +177,10 @@ always returns a value. Missing null check before accessing .url property.` },
         { time: fmt(115500), action: "Action group triggered: ag-devin-triage", status: "Success" },
         { time: fmt(115000), action: "Webhook called: Devin-AI-Webhook", status: "Success (201)" },
         { time: fmt(114500), action: "Devin session created", status: "session_1707252412345" },
+        { time: fmt(110000), action: "Root cause identified", status: "Missing null check for parent relationship" },
+        { time: fmt(105000), action: "PR #812 created with fix", status: "Added optional chaining" },
+        { time: fmt(100000), action: "Similar incidents found", status: "No similar incidents (new pattern)" },
+        { time: fmt(95000), action: "📋 Post-mortem generated", status: "View at /incidents" },
       ],
     },
     // ========================================================================
@@ -657,6 +669,96 @@ function AlertDetailPanel({ alert, onClose, devinSession }: { alert: Alert; onCl
                       <span className="font-medium text-[#323130]">{d.value}</span>
                     </div>
                   ))}
+                </div>
+              </div>
+
+              {/* Similar Incidents - Pattern Recognition */}
+              <div className="bg-[#deecf9] border border-[#0078d4]/30 rounded p-4">
+                <h3 className="text-base font-semibold text-[#0078d4] mb-3 flex items-center gap-2">
+                  <span className="text-xl">🔄</span>
+                  Similar Incidents (Pattern Recognition)
+                </h3>
+                <p className="text-sm text-[#323130] mb-4">
+                  Based on alert type, resource, and log patterns, we found similar past incidents with known resolutions:
+                </p>
+                
+                {alert.name.includes("token") && (
+                  <div className="space-y-3">
+                    <div className="bg-white rounded p-3 border border-[#0078d4]/20">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs font-bold text-[#0078d4]">INC-1847</span>
+                          <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs">94% match</span>
+                          <span className="text-xs text-[#605e5c]">Feb 3, 2024</span>
+                        </div>
+                        <a href="/incidents" className="text-xs text-[#0078d4] hover:underline">View →</a>
+                      </div>
+                      <div className="text-sm font-medium text-[#323130] mb-1">Token refresh failure</div>
+                      <div className="text-xs text-[#605e5c] mb-2">Root cause: Token cache not invalidated on refresh failure</div>
+                      <div className="text-xs bg-[#f3f2f1] p-2 rounded text-[#323130]">
+                        <strong>Solution applied:</strong> Implemented proper cache invalidation. Added token validation before use.
+                      </div>
+                    </div>
+                    <div className="bg-white rounded p-3 border border-[#0078d4]/20">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs font-bold text-[#0078d4]">INC-1623</span>
+                          <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded text-xs">87% match</span>
+                          <span className="text-xs text-[#605e5c]">Jan 22, 2024</span>
+                        </div>
+                        <a href="/incidents" className="text-xs text-[#0078d4] hover:underline">View →</a>
+                      </div>
+                      <div className="text-sm font-medium text-[#323130] mb-1">Credential cache corruption</div>
+                      <div className="text-xs text-[#605e5c]">Root cause: Memory pressure caused cache eviction</div>
+                    </div>
+                  </div>
+                )}
+                
+                {alert.name.includes("timeout") && (
+                  <div className="space-y-3">
+                    <div className="bg-white rounded p-3 border border-[#0078d4]/20">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs font-bold text-[#0078d4]">INC-1792</span>
+                          <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs">87% match</span>
+                          <span className="text-xs text-[#605e5c]">Jan 28, 2024</span>
+                        </div>
+                        <a href="/incidents" className="text-xs text-[#0078d4] hover:underline">View →</a>
+                      </div>
+                      <div className="text-sm font-medium text-[#323130] mb-1">API timeout on batch operations</div>
+                      <div className="text-xs text-[#605e5c] mb-2">Root cause: Unbounded batch size causing timeouts</div>
+                      <div className="text-xs bg-[#f3f2f1] p-2 rounded text-[#323130]">
+                        <strong>Solution applied:</strong> Implemented pagination with max batch size. Added request timeout config.
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {alert.name.includes("null") && (
+                  <div className="bg-white rounded p-3 border border-[#0078d4]/20">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">New pattern</span>
+                    </div>
+                    <div className="text-sm text-[#323130]">
+                      No similar incidents found. This appears to be a new failure pattern.
+                      Devin will analyze from first principles.
+                    </div>
+                  </div>
+                )}
+                
+                {!alert.name.includes("token") && !alert.name.includes("timeout") && !alert.name.includes("null") && (
+                  <div className="bg-white rounded p-3 border border-[#0078d4]/20">
+                    <div className="text-sm text-[#605e5c]">
+                      Analyzing historical incidents for pattern matches...
+                    </div>
+                  </div>
+                )}
+                
+                <div className="mt-4 pt-3 border-t border-[#0078d4]/20">
+                  <a href="/incidents" className="inline-flex items-center gap-2 text-sm text-[#0078d4] font-medium hover:underline">
+                    <span>📋</span>
+                    Browse full incident knowledge base →
+                  </a>
                 </div>
               </div>
             </div>
