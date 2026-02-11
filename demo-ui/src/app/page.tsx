@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 // ============================================================================
 // TYPES
@@ -921,6 +921,10 @@ function AzureMonitorDemo({ onDevinNotification, devinSessions }: { onDevinNotif
   const [isTriggering, setIsTriggering] = useState(false);
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
   
+  // Live Demo Mode
+  const [liveDemoMode, setLiveDemoMode] = useState(false);
+  const [liveStats, setLiveStats] = useState({ p2Count: 0, p1Count: 0, startTime: 0 });
+  
   // Modals
   const [actionGroupModal, setActionGroupModal] = useState(false);
   const [processingRuleModal, setProcessingRuleModal] = useState(false);
@@ -954,6 +958,78 @@ function AzureMonitorDemo({ onDevinNotification, devinSessions }: { onDevinNotif
     actionGroup: "ag-devin-triage",
     scheduleType: "always",
   });
+
+  // Live Demo Mode - Auto-generate alerts
+  const p2AlertTypes: Array<"memory" | "slowquery" | "certexpiry"> = ["memory", "slowquery", "certexpiry"];
+  const p3AlertTypes: Array<"deployment" | "shardrebalance" | "ratelimit"> = ["deployment", "shardrebalance", "ratelimit"];
+  const p1AlertTypes: Array<"auth" | "timeout" | "nullref"> = ["auth", "timeout", "nullref"];
+  
+  const generateLiveAlert = useCallback((severity: "p1" | "p2" | "p3") => {
+    const types = severity === "p1" ? p1AlertTypes : severity === "p2" ? p2AlertTypes : p3AlertTypes;
+    const type = types[Math.floor(Math.random() * types.length)];
+    const alertData = generateAlertData(type);
+    const alert: Alert = {
+      ...alertData,
+      id: crypto.randomUUID(),
+      firedTime: new Date().toISOString(),
+    };
+    
+    setAlerts(prev => [alert, ...prev.slice(0, 19)]); // Keep max 20 alerts
+    setNav("alerts");
+    
+    // Update stats
+    setLiveStats(prev => ({
+      ...prev,
+      p2Count: severity === "p2" || severity === "p3" ? prev.p2Count + 1 : prev.p2Count,
+      p1Count: severity === "p1" ? prev.p1Count + 1 : prev.p1Count,
+    }));
+    
+    // Auto-trigger Devin for P1 alerts
+    if (severity === "p1") {
+      const sessionId = `session_${Date.now()}`;
+      const sessionUrl = `https://app.devin.ai/sessions/${sessionId}`;
+      
+      setTimeout(() => {
+        onDevinNotification({ id: crypto.randomUUID(), sessionId, url: sessionUrl, alertName: alert.name, status: "creating", timestamp: new Date().toISOString() });
+      }, 500);
+      setTimeout(() => {
+        onDevinNotification({ id: crypto.randomUUID(), sessionId, url: sessionUrl, alertName: alert.name, status: "analyzing", timestamp: new Date().toISOString() });
+      }, 3500);
+      setTimeout(() => {
+        onDevinNotification({ id: crypto.randomUUID(), sessionId, url: sessionUrl, alertName: alert.name, status: "complete", timestamp: new Date().toISOString() });
+      }, 8500);
+    }
+  }, [onDevinNotification]);
+  
+  useEffect(() => {
+    if (!liveDemoMode) return;
+    
+    // Reset stats when starting
+    setLiveStats({ p2Count: 0, p1Count: 0, startTime: Date.now() });
+    setAlerts([]);
+    
+    // Generate initial P2 after 2 seconds
+    const initialTimeout = setTimeout(() => {
+      generateLiveAlert("p2");
+    }, 2000);
+    
+    // P2/P3 alerts every 10-15 seconds
+    const p2Interval = setInterval(() => {
+      const isP3 = Math.random() > 0.7; // 30% chance of P3
+      generateLiveAlert(isP3 ? "p3" : "p2");
+    }, 10000 + Math.random() * 5000);
+    
+    // P1 alerts every 60 seconds
+    const p1Interval = setInterval(() => {
+      generateLiveAlert("p1");
+    }, 60000);
+    
+    return () => {
+      clearTimeout(initialTimeout);
+      clearInterval(p2Interval);
+      clearInterval(p1Interval);
+    };
+  }, [liveDemoMode, generateLiveAlert]);
 
   const triggerAlert = async (type: "auth" | "timeout" | "nullref" | "memory" | "slowquery" | "certexpiry" | "deployment" | "shardrebalance" | "ratelimit") => {
     setIsTriggering(true);
@@ -1056,8 +1132,43 @@ function AzureMonitorDemo({ onDevinNotification, devinSessions }: { onDevinNotif
             </button>
           ))}
 
+          {/* Live Demo Mode */}
+          <div className="azure-nav-section mt-6">🎬 Live Demo Mode</div>
+          <div className="px-3 mb-4">
+            <button
+              onClick={() => setLiveDemoMode(!liveDemoMode)}
+              className={`w-full px-4 py-3 rounded-lg text-sm font-medium transition-all ${
+                liveDemoMode 
+                  ? "bg-gradient-to-r from-red-500 to-orange-500 text-white shadow-lg animate-pulse" 
+                  : "bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:shadow-lg"
+              }`}
+            >
+              {liveDemoMode ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="w-2 h-2 bg-white rounded-full animate-ping" />
+                  LIVE — Click to Stop
+                </span>
+              ) : (
+                <span className="flex items-center justify-center gap-2">
+                  ▶️ Start Live Demo
+                </span>
+              )}
+            </button>
+            {liveDemoMode && (
+              <div className="mt-2 p-2 bg-[#fff4ce] rounded text-xs text-[#323130] space-y-1">
+                <div className="font-medium">🔴 LIVE MODE ACTIVE</div>
+                <div>• P2/P3 every 10-15 sec</div>
+                <div>• P1 every 60 sec → triggers Devin</div>
+                <div className="pt-1 border-t border-[#edebe9] mt-1">
+                  <span className="text-[#605e5c]">Generated: </span>
+                  <span className="font-medium">{liveStats.p2Count} warnings, {liveStats.p1Count} critical</span>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Demo Triggers */}
-          <div className="azure-nav-section mt-6">🧪 Demo Triggers</div>
+          <div className="azure-nav-section">🧪 Manual Triggers</div>
           <div className="px-3 space-y-3">
             {/* P1 - Critical/Error */}
             <div>
