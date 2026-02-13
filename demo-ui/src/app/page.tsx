@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 // ============================================================================
 // TYPES
@@ -1001,6 +1001,9 @@ function AzureMonitorDemo({ onDevinNotification, devinSessions }: { onDevinNotif
     }
   }, [onDevinNotification]);
   
+  const generateLiveAlertRef = useRef(generateLiveAlert);
+  useEffect(() => { generateLiveAlertRef.current = generateLiveAlert; }, [generateLiveAlert]);
+
   useEffect(() => {
     if (!liveDemoMode) return;
     
@@ -1010,26 +1013,32 @@ function AzureMonitorDemo({ onDevinNotification, devinSessions }: { onDevinNotif
     
     // Generate initial P2 after 2 seconds
     const initialTimeout = setTimeout(() => {
-      generateLiveAlert("p2");
+      generateLiveAlertRef.current("p2");
     }, 2000);
     
     // P2/P3 alerts every 10-15 seconds
     const p2Interval = setInterval(() => {
       const isP3 = Math.random() > 0.7; // 30% chance of P3
-      generateLiveAlert(isP3 ? "p3" : "p2");
+      generateLiveAlertRef.current(isP3 ? "p3" : "p2");
     }, 10000 + Math.random() * 5000);
     
-    // P1 alerts every 60 seconds
+    // P1 alerts every 30 seconds
     const p1Interval = setInterval(() => {
-      generateLiveAlert("p1");
-    }, 60000);
+      generateLiveAlertRef.current("p1");
+    }, 30000);
+
+    // Auto-stop after 5 minutes
+    const autoStop = setTimeout(() => {
+      setLiveDemoMode(false);
+    }, 5 * 60 * 1000);
     
     return () => {
       clearTimeout(initialTimeout);
       clearInterval(p2Interval);
       clearInterval(p1Interval);
+      clearTimeout(autoStop);
     };
-  }, [liveDemoMode, generateLiveAlert]);
+  }, [liveDemoMode]);
 
   const triggerAlert = async (type: "auth" | "timeout" | "nullref" | "memory" | "slowquery" | "certexpiry" | "deployment" | "shardrebalance" | "ratelimit") => {
     setIsTriggering(true);
