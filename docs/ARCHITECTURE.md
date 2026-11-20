@@ -40,9 +40,9 @@ Every response, including failures, is HTTP 200 with `success: false` and an `er
 
 Both pages run entirely in the browser with hard-coded data. They never call `/api/trigger-devin` or `/api/slack-triage` and never contact Devin; session IDs and URLs (`session_<timestamp>`) are generated client-side for the demo.
 
-- **`/` (Azure Monitor / Elastic replicas).** A top bar switches between the two consoles. Nine canned alert scenarios (Sev 1: auth, timeout, null reference; Sev 2: memory, slow query, certificate expiry; Sev 3: deployment, shard rebalance, rate limit) can be fired by hand. Only Sev 1 alerts show a simulated Devin session (creating → analyzing → complete over about 8 s, with a notification banner). The alert detail panel has Summary, History, Diagnostics and Actions tabs, including hard-coded "similar incidents" links to `/incidents`. The Azure view also has Action group, Alert rule and Alert processing rule configuration modals.
+- **`/` (Azure Monitor / Elastic replicas).** A top bar switches between the two consoles. Nine canned alert scenarios (Sev 1: auth, timeout, null reference; Sev 2: memory, slow query, certificate expiry; Sev 3: deployment, shard rebalance, rate limit) can be fired by hand. Only Sev 1 alerts show a simulated Devin session (creating → analyzing → complete over about 8 s, with a notification banner). The alert detail panel has Summary, History, Diagnostics and Actions Taken tabs, including hard-coded "similar incidents" links to `/incidents`. The Azure view also has Action group, Alert rule and Alert processing rule configuration modals.
 - **Live Demo Mode (Azure view).** A toggle that clears the alert list and generates alerts on timers: a first Sev 2 alert after 2 s, a Sev 2/3 alert every 10–15 s, a Sev 1 alert (with simulated Devin session) every 30 s, keeping at most 20 alerts and stopping on its own after 5 minutes.
-- **`/incidents` (knowledge base).** Eight historical incidents with filters by search text, alert type and severity, summary stats, and a detail view with Overview, Post-Mortem and Similar Incidents tabs. `findSimilarIncidents()` scores resolved incidents by alert type (0.4), alert-name word overlap (up to 0.2), same resource (0.2), log keyword tags (up to 0.1) and a resolved bonus (0.1), keeping matches at or above 0.3 (top 5).
+- **`/incidents` (knowledge base).** Eight historical incidents with filters by search text, alert type and severity, summary stats, and a detail view with Overview, Post-Mortem and Similar (N) tabs. `findSimilarIncidents()` scores resolved incidents by alert type (0.4), alert-name word overlap (up to 0.2), same resource (0.2), log keyword tags (up to 0.1) and a resolved bonus (0.1), keeping matches at or above 0.3 (top 5).
 
 ## Configuration
 
@@ -68,6 +68,7 @@ These are behaviors of the code on `main`, recorded so the docs do not over-prom
 - No webhook authentication: `WEBHOOK_SECRET` and `SLACK_SIGNING_SECRET` are not verified. [API Reference → Authentication](./API-REFERENCE.md#authentication) shows how to add a bearer check.
 - No deduplication across Azure and Elastic; the Redis snippets in the README and [COMPARISON.md](./COMPARISON.md) are examples to add.
 - No Azure common alert schema parsing (see step 1 above).
+- The Live Demo Mode sidebar says "P1 every 60 sec", but the timer fires a Sev 1 every 30 s (verified in the browser); this page documents the timer.
 - `/api/slack-triage` creates the session after responding; on serverless hosts that freeze the function after the response, that background call may not finish.
 
 ## Running it
