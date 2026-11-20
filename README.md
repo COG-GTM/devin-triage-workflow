@@ -110,14 +110,18 @@ You'll need a Devin API key to create sessions. Choose the right key type for yo
 
 You need a publicly accessible endpoint that receives alerts and calls the Devin API.
 
-**Reference implementation:** See [`demo-ui/src/app/api/trigger-devin/route.ts`](./demo-ui/src/app/api/trigger-devin/route.ts)
+**Reference implementation:** See [`demo-ui/src/app/api/trigger-devin/route.ts`](./demo-ui/src/app/api/trigger-devin/route.ts), a Next.js route handler (it runs as part of the `demo-ui` Next.js app; [DEPLOYMENT.md](./docs/DEPLOYMENT.md) shows an Azure Functions port). How it works is in [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md).
 
-Deploy this endpoint to Azure Functions with these environment variables:
+Configure it with these environment variables (template: [`demo-ui/.env.example`](./demo-ui/.env.example)):
 
 | Variable | Description | Where to Get |
 |----------|-------------|--------------|
 | `DEVIN_API_KEY` | Your Devin API key | [app.devin.ai/settings/api-keys](https://app.devin.ai/settings/api-keys) |
-| `TARGET_REPO` | Repo Devin will analyze | Your GitHub repo URL |
+| `TARGET_REPO` | Repo Devin will analyze (defaults to `COG-GTM/azure-devops-mcp` if unset) | Your GitHub repo URL |
+| `JIRA_PROJECT`, `SLACK_CHANNEL` | Optional: named in the prompt so Devin files the ticket and posts the update there | Your Jira project key / Slack channel |
+| `SLACK_WEBHOOK_URL` | Optional: the endpoint posts a "Devin Alert Triage Triggered" message here | [Slack incoming webhooks](https://api.slack.com/messaging/webhooks) |
+
+> The endpoint reads a flat JSON body (`alertName`, `severity`, `description`, `logs`, `file`, `line`, ...). It does not unwrap the Azure Monitor common alert schema or check `WEBHOOK_SECRET`; see [Known gaps](./docs/ARCHITECTURE.md#known-gaps-in-the-reference-code).
 
 ### Step 3: Connect Your Monitoring Platform
 
@@ -141,10 +145,10 @@ Deploy this endpoint to Azure Functions with these environment variables:
 ```bash
 curl -X POST https://your-endpoint-url/api/trigger-devin \
   -H "Content-Type: application/json" \
-  -d '{"alertName":"test","severity":1,"description":"Test alert"}'
+  -d '{"alertName":"test","severity":1,"description":"Test alert","file":"src/app.ts","line":1}'
 ```
 
-You should receive a response with a Devin session URL.
+You should receive `{"success": true, "session_id": "...", "url": "https://app.devin.ai/sessions/..."}`. Errors also come back as HTTP 200 with `"success": false` and an `error` message. Keep the `file` field: without it the reference route fails with `Cannot read properties of undefined (reading 'split')`.
 
 ---
 
@@ -310,7 +314,7 @@ For enterprise environments, combining both platforms provides defense-in-depth:
                              ▼
                   ┌─────────────────────┐
                   │   Webhook Endpoint  │
-                  │  (Deduplication)    │
+                  │ (add deduplication) │
                   └──────────┬──────────┘
                              │
                              ▼
@@ -321,7 +325,7 @@ For enterprise environments, combining both platforms provides defense-in-depth:
 
 ### Deduplication
 
-When using both, the webhook can deduplicate to avoid double-triggering:
+When using both, add deduplication to the webhook to avoid double-triggering. The reference route does not deduplicate; this is a sketch you would add (with a Redis client of your choice):
 
 ```typescript
 // Alerts from both platforms go to same endpoint
@@ -333,10 +337,25 @@ await redis.set(alertKey, 'processing', 'EX', 300);
 
 ---
 
+## 🏗️ Architecture
+
+![devin-triage-workflow architecture](./docs/diagrams/architecture.png)
+
+The repository's code is one Next.js 16 app in [`demo-ui/`](./demo-ui/):
+
+- **`POST /api/trigger-devin`** receives alerts as flat JSON, builds a 7-phase triage prompt and creates a session through the Devin v1 API (`POST https://api.devin.ai/v1/sessions`), then optionally posts to a Slack incoming webhook. `GET` on the same path reports whether a key is configured.
+- **`POST /api/slack-triage`** handles a Slack `/triage <sev> <name> | <description>` slash command: it answers Slack at once and creates the Devin session in the background (with tags, a title and `DEVIN_PLAYBOOK_ID` if set).
+- **`/` and `/incidents`** are browser-only demo pages with simulated data; they do not call the API routes or Devin.
+
+Details, configuration defaults and known gaps: **[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)**. The diagram source is [`docs/diagrams/architecture.dot`](./docs/diagrams/architecture.dot) (Graphviz); run [`docs/diagrams/render.sh`](./docs/diagrams/render.sh) to regenerate the [PNG](./docs/diagrams/architecture.png) and [SVG](./docs/diagrams/architecture.svg).
+
+---
+
 ## 📖 Documentation
 
 | Guide | Description |
 |-------|-------------|
+| [Architecture](./docs/ARCHITECTURE.md) | How the reference code works, with the diagram |
 | [**Use Cases & Best Practices**](./docs/USE-CASES.md) | **Start here** — When to use, when not to, alert tuning |
 | [Azure Monitor Setup](./docs/AZURE-MONITOR-SETUP.md) | Step-by-step Azure configuration with portal links |
 | [Elastic Setup](./docs/ELASTIC-SETUP.md) | Kibana alerting, Watcher, and ML setup |
@@ -349,20 +368,21 @@ await redis.set(alertKey, 'processing', 'EX', 300);
 
 ## 🧪 Demo UI
 
-The included demo UI simulates both Azure Monitor and Elastic alert experiences:
+The included demo UI simulates both Azure Monitor and Elastic alert experiences. Its pages run entirely in the browser with canned data: they do not call the webhook routes or create real Devin sessions.
 
 ```bash
 cd demo-ui
 npm install
-npm run dev
+npm run dev    # http://localhost:3000
 ```
 
 **Features:**
-- Azure Monitor replica with Action Groups and Alert Rules UI
+- Azure Monitor replica with Action Group, Alert Rule and Alert Processing Rule UI
 - Elastic/Kibana-style alerting interface
-- Demo triggers for common error scenarios
-- Real-time Devin session status simulation
-- Expandable alert details with logs and stack traces
+- Demo triggers for nine scenarios (Sev 1–3); only Sev 1 alerts start a simulated Devin session
+- **Live Demo Mode** (Azure view): auto-generates Sev 2/3 alerts every 10–15 s and a Sev 1 alert every 30 s, stopping after 5 minutes
+- Expandable alert details with logs, stack traces and similar past incidents
+- **Incident knowledge base** at `/incidents`: historical incidents with filters, pattern-matched similar incidents and generated post-mortems
 
 ---
 
@@ -410,7 +430,7 @@ Team notified with status, links to PR, JIRA, and Devin session.
 ## 🔒 Security
 
 - **API keys stored server-side** — never exposed to clients
-- **Webhook secrets supported** — authenticate incoming requests
+- **Webhook secrets** — add a bearer check for incoming requests ([how](./docs/API-REFERENCE.md#authentication)); the reference route does not verify `WEBHOOK_SECRET` yet
 - **No sensitive data logged** — only alert metadata processed
 - **Devin operates in your repos** — you control access
 
