@@ -1,0 +1,54 @@
+// Architecture of devin-triage-workflow (main branch).
+// Edit this file, then run ./render.sh to regenerate architecture.png and architecture.svg.
+digraph architecture {
+  graph [rankdir=TB, fontname="DejaVu Sans", fontsize=18, labelloc=t, nodesep=0.5, ranksep=0.7, pad=0.3,
+         label="devin-triage-workflow: alert → webhook → Devin → GitHub / Jira / Slack"];
+  node  [shape=box, style="rounded,filled", fillcolor=white, fontname="DejaVu Sans", fontsize=16];
+  edge  [fontname="DejaVu Sans", fontsize=13];
+
+  subgraph cluster_sources {
+    label="Alert sources (configured by you, see docs/*-SETUP.md)"; style="rounded,dashed"; color="#888888";
+    azure   [label="Azure Monitor\nalert rule → Action Group\n(webhook action)", fillcolor="#deecf9"];
+    elastic [label="Elastic / Kibana\nrule → Webhook connector", fillcolor="#d5f5f2"];
+    slackuser [label="Slack user\n/triage slash command", fillcolor="#f3e5f5"];
+    { rank=same; azure; elastic; slackuser; }
+  }
+
+  subgraph cluster_app {
+    label="demo-ui/ (Next.js 16 app, one process)"; style="rounded"; color="#333333";
+    trigger [label="POST /api/trigger-devin\n(route.ts)\nflat JSON body → triage prompt\nGET = config check", fillcolor="#fff4ce"];
+    slashcmd [label="POST /api/slack-triage\n(route.ts)\nform-encoded slash command\n→ immediate ack, background session", fillcolor="#fff4ce"];
+    ui [label="Browser demo pages (client-only)\n/ : Azure Monitor + Elastic replicas,\nLive Demo Mode, simulated Devin sessions\n/incidents : static incident knowledge base,\npattern matching, post-mortems", fillcolor="#eeeeee"];
+    { rank=same; trigger; slashcmd; }
+  }
+
+  devin [label="Devin API v1\nPOST https://api.devin.ai/v1/sessions", fillcolor="#e8e8ff"];
+  session [label="Devin session\n7-phase triage playbook prompt\n(docs/DEVIN-PLAYBOOK.md)", fillcolor="#e8e8ff"];
+
+  subgraph cluster_out {
+    label="Outputs (done by Devin through its own integrations)"; style="rounded,dashed"; color="#888888";
+    github [label="GitHub PR\nin TARGET_REPO"];
+    jira   [label="Jira ticket\nin JIRA_PROJECT"];
+    slackch [label="Slack post\nin SLACK_CHANNEL"];
+    { rank=same; github; jira; slackch; }
+  }
+
+  slackhook [label="Slack incoming webhook\n(SLACK_WEBHOOK_URL)\n\"Devin Alert Triage Triggered\"", fillcolor="#f3e5f5"];
+  respurl [label="Slack response_url\n\"Devin session created!\"", fillcolor="#f3e5f5"];
+
+  azure   -> trigger [label="POST JSON*"];
+  elastic -> trigger [label="POST JSON"];
+  slackuser -> slashcmd [label="POST form"];
+  trigger -> devin [label="Bearer DEVIN_API_KEY"];
+  slashcmd -> devin [label="Bearer DEVIN_API_KEY\n+ optional playbook_id"];
+  trigger -> slackhook [label="after session created\n(if configured)"];
+  slashcmd -> respurl [label="session URL"];
+  devin -> session;
+  session -> github;
+  session -> jira;
+  session -> slackch;
+
+  note [shape=note, fillcolor="#fffbe6", fontsize=13,
+        label="* The route reads flat fields (alertName, severity, description, logs, file, line, ...);\nit does not parse the Azure common alert schema, verify WEBHOOK_SECRET or\nSlack signatures, or deduplicate. The browser pages never call the API routes."];
+  ui -> note [style=invis];
+}

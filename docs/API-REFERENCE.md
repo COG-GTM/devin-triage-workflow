@@ -121,18 +121,18 @@ Authorization: Bearer your-secret-key-here
 | `alertName` | string | Yes | Name of the alert rule that fired |
 | `severity` | number | Yes | 0 (Critical) to 4 (Verbose) |
 | `description` | string | Yes | Human-readable description of the issue |
+| `file` | string | Yes in the reference route | Source file where the error occurred; the route uses it for the PR title and fails without it |
 | `affectedResource` | string | No | Resource name (cluster, service, etc.) |
 | `signalType` | string | No | `log`, `metric`, or `activity` |
 | `firedTime` | string | No | ISO 8601 timestamp |
 | `source` | string | No | `azure-monitor`, `elastic`, `datadog`, etc. |
 | `logs` | string | No | Error logs, stack traces |
-| `file` | string | No | Source file where error occurred |
 | `line` | number | No | Line number in source file |
 | `dimensions` | object | No | Additional context (key-value pairs) |
 
 ### Azure Monitor Common Alert Schema
 
-When Azure Monitor sends an alert with the common schema enabled:
+When Azure Monitor sends an alert with the common schema enabled, the body looks like this. The reference route (`demo-ui/src/app/api/trigger-devin/route.ts`) does not unwrap this shape: it only reads the flat fields above, so map `data.essentials` / `data.alertContext` to those fields (in the route or in front of it) before relying on it.
 
 ```json
 {
@@ -207,27 +207,29 @@ When Kibana sends an alert:
 ```json
 {
   "success": true,
-  "sessionId": "session_1707228000000",
-  "sessionUrl": "https://app.devin.ai/sessions/session_1707228000000",
-  "message": "Devin session created successfully"
+  "session_id": "devin-abc123...",
+  "url": "https://app.devin.ai/sessions/abc123..."
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `success` | boolean | `true` if session was created |
-| `sessionId` | string | Unique Devin session identifier |
-| `sessionUrl` | string | Direct link to watch Devin work |
-| `message` | string | Human-readable status message |
+| `success` | boolean | `true` if the session was created |
+| `session_id` | string | Devin session identifier returned by the Devin API |
+| `url` | string | Direct link to watch Devin work |
 
 ### HTTP Status Codes
 
-| Code | Meaning | Body |
-|------|---------|------|
-| 200 | Success | Success response with session details |
-| 400 | Bad Request | Missing required fields |
-| 401 | Unauthorized | Invalid or missing webhook secret |
-| 500 | Server Error | Devin API error or internal error |
+The reference route returns **HTTP 200 for every outcome**, including errors; check `success` and `error` in the body:
+
+| Body | When |
+|------|------|
+| `{"success": true, "session_id", "url"}` | Session created |
+| `{"success": false, "error": "DEVIN_API_KEY not configured", "session_id": "demo_<ts>", "url"}` | No API key set (no Devin call made) |
+| `{"success": false, "error": "Devin API error: <status>", "message": "<Devin response body>"}` | Devin rejected the call (e.g. 401 for a bad key) |
+| `{"success": false, "error": "<exception message>"}` | Invalid JSON, missing `file`, or a network error |
+
+The 400/401/500 responses below are what you get after adding validation and the webhook secret check yourself; the reference route does not send them.
 
 ---
 
@@ -316,7 +318,7 @@ response = requests.post(
 )
 
 print(response.json())
-# {'success': True, 'sessionId': 'session_...', 'sessionUrl': 'https://app.devin.ai/...'}
+# {'success': True, 'session_id': '...', 'url': 'https://app.devin.ai/sessions/...'}
 ```
 
 ### Node.js
@@ -378,10 +380,11 @@ $response
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `WEBHOOK_SECRET` | Secret for webhook authentication | None (no auth) |
-| `JIRA_PROJECT` | JIRA project key for ticket creation | None |
-| `SLACK_CHANNEL` | Slack channel for notifications | None |
-| `DEVIN_PLAYBOOK_ID` | Playbook name to use | `devin-triage-workflow` |
+| `WEBHOOK_SECRET` | Secret for webhook authentication (only after you add the check above; the reference route ignores it) | None (no auth) |
+| `JIRA_PROJECT` | JIRA project key named in the prompt | `PLATFORM` |
+| `SLACK_CHANNEL` | Slack channel named in the prompt | `#alerts` (`#devin-triage` for `/api/slack-triage`) |
+| `SLACK_WEBHOOK_URL` | Slack incoming webhook the route posts to after creating a session | None (skipped) |
+| `DEVIN_PLAYBOOK_ID` | Playbook ID sent as `playbook_id` (used by `/api/slack-triage` only) | None |
 
 ### Setting Environment Variables
 

@@ -25,10 +25,12 @@ The webhook endpoint code is in:
 demo-ui/src/app/api/trigger-devin/route.ts
 ```
 
+It is a Next.js route handler served by the `demo-ui` app (see [ARCHITECTURE.md](./ARCHITECTURE.md)). The Azure Function below is a simplified port of it: it sends a shorter prompt plus `playbook_id`, validates `alertName`/`severity`, and returns `sessionId`/`sessionUrl` with real HTTP error codes, while the Next.js route always answers HTTP 200 with `success`, `session_id` and `url`.
+
 ### What the Endpoint Does
 
 ```typescript
-// Receives alert payload from Azure Monitor
+// Receives a flat JSON alert payload (alertName, severity, description, logs, file, line, ...)
 const { alertName, severity, description, logs } = await request.json();
 
 // Calls Devin API to create a triage session
@@ -43,8 +45,8 @@ const response = await fetch('https://api.devin.ai/v1/sessions', {
   })
 });
 
-// Returns session URL
-return { sessionId, sessionUrl };
+// Returns the session ID and URL
+return { success: true, session_id, url };
 ```
 
 ---
